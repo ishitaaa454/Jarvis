@@ -102,3 +102,15 @@
 2026-08-03 21:34:10,830 [INFO] jarvis.clap: near-miss: peak=0.081 below threshold=0.140 (crest=2.7 hf=0.45)
 2026-08-03 21:34:11,459 [INFO] jarvis.clap: Interrupted by user (Ctrl+C).
 2026-08-03 21:34:11,605 [INFO] jarvis.clap: Jarvis listener stopped.
+2026-08-03 22:27:18,731 [ERROR] jarvis.main: Vosk model not found at: C:\Users\Ishita Joshi\Desktop\Projects\Jarvis\jarvis-workspace\models\vosk-model-small-en-us-0.15
+Download vosk-model-small-en-us-0.15 and extract it under models/.
+See models/README.md for exact steps.
+2026-08-03 22:39:08,840 [INFO] jarvis.wake: Loading Vosk model from C:\Users\Ishita Joshi\Desktop\Projects\Jarvis\jarvis-workspace\models\vosk-model-small-en-us-0.15
+2026-08-03 22:39:09,443 [INFO] jarvis.wake: Vosk model loaded.
+2026-08-03 22:39:09,443 [INFO] jarvis.main: State: LISTENING_FOR_CLAPS
+2026-08-03 22:39:09,444 [INFO] jarvis.clap: Jarvis listener started.
+2026-08-03 22:39:09,445 [INFO] jarvis.clap: Starting microphone calibration (3.0s).
+2026-08-03 22:39:12,466 [INFO] jarvis.clap: Calibration complete. ambient_median=0.00003 ambient_p75=0.00011 threshold=0.10000
+2026-08-03 22:39:59,400 [INFO] jarvis.clap: First clap detected.
+2026-08-03 22:40:08,525 [INFO] jarvis.clap: Interrupted by user (Ctrl+C).
+2026-08-03 22:40:08,699 [INFO] jarvis.clap: Jarvis listener stopped.

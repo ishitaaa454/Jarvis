@@ -349,14 +349,19 @@ class ClapDetector:
         baseline = float(np.median(self._recent_peaks)) if self._recent_peaks else 0.0
         self._recent_peaks.append(peak)
 
+        # Second clap is often quieter / against an elevated mic baseline.
+        effective_threshold = (
+            self.threshold * 0.85 if self._awaiting_second else self.threshold
+        )
+
         # Enter / continue a loud peak based on amplitude only.
         # Crest/HF are judged on the falling edge using the best values seen.
-        if peak >= self.threshold:
+        if peak >= effective_threshold:
             if not self._above_threshold:
-                # After the first clap the mic level is often still high, so a
-                # strict rise check rejects real second claps (seen as 0.8–1.0x).
-                if not self._awaiting_second:
-                    rise = peak / max(baseline, 1e-6) if baseline > 0 else float("inf")
+                # Skip rise check while awaiting the second clap, and keep it
+                # mild for the first clap (laptop AGC raises the baseline).
+                if not self._awaiting_second and baseline > 0.02:
+                    rise = peak / max(baseline, 1e-6)
                     if rise < self.min_rise_ratio:
                         self._debug(
                             f"peak={peak:.3f} but soft rise {rise:.1f}x "
@@ -376,9 +381,9 @@ class ClapDetector:
             return
 
         # Below threshold but somewhat loud — useful while tuning.
-        if peak >= self.threshold * 0.55:
+        if peak >= effective_threshold * 0.55:
             self._debug(
-                f"peak={peak:.3f} below threshold={self.threshold:.3f} "
+                f"peak={peak:.3f} below threshold={effective_threshold:.3f} "
                 f"(crest={crest:.1f} hf={hf_ratio:.2f})",
                 now,
             )
