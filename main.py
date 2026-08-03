@@ -91,6 +91,7 @@ def main() -> None:
         nonlocal state
         state = "LISTENING_FOR_WAKE_PHRASE"
         print("Listening for wake phrase...")
+        print('Say: "Wake up, Jarvis"')
         logger.info("State: %s", state)
 
         try:

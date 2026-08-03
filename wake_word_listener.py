@@ -4,6 +4,12 @@ Offline wake-phrase listener using Vosk.
 Loads the Vosk model once, then opens the microphone only while listening
 for the wake phrase. The stream is always closed before returning so the
 clap detector can reclaim the mic safely.
+
+The small English model often mishears "jarvis" as unrelated words when left
+unconstrained. We therefore:
+  1. Constrain decoding with a phrase grammar (wake variants + [unk])
+  2. Keep listening until a match or timeout (ignore early wrong finals)
+  3. Apply normalized / fuzzy matching that still rejects partial phrases
 """
 
 from __future__ import annotations
@@ -13,6 +19,7 @@ import logging
 import re
 import time
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Optional
 
@@ -35,6 +42,14 @@ except ImportError as exc:  # pragma: no cover
     ) from exc
 
 
+# Phrases the grammar recognizer is allowed to emit (plus [unk]).
+WAKE_PHRASE_VARIANTS = (
+    "wake up jarvis",
+    "wake up, jarvis",
+    "wakeup jarvis",
+)
+
+
 @dataclass
 class WakeListenResult:
     """Outcome of one wake-phrase listening attempt."""
@@ -47,10 +62,8 @@ class WakeListenResult:
 def normalize_speech_text(text: str) -> str:
     """Lowercase, strip punctuation, collapse spaces, normalize 'wakeup'."""
     lowered = text.lower().strip()
-    # Remove punctuation (keep letters, digits, spaces).
     cleaned = re.sub(r"[^a-z0-9\s]", " ", lowered)
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
-    # "Wakeup Jarvis" -> "wake up jarvis"
     cleaned = re.sub(r"\bwakeup\b", "wake up", cleaned)
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
     return cleaned
@@ -64,9 +77,46 @@ def is_wake_phrase(text: str, wake_phrase: str = config.WAKE_PHRASE) -> bool:
     Rejects: "hello jarvis", "open jarvis", "wake up"
     """
     normalized = normalize_speech_text(text)
+    if not normalized:
+        return False
+
     target = normalize_speech_text(wake_phrase)
-    # Exact match after normalization — prevents partial phrases like "wake up".
-    return normalized == target
+
+    # Hard rejects for required non-matches.
+    if normalized in {"wake up", "hello jarvis", "open jarvis"}:
+        return False
+    if normalized.startswith("hello ") or normalized.startswith("open "):
+        return False
+
+    if normalized == target:
+        return True
+    if normalized in {normalize_speech_text(v) for v in WAKE_PHRASE_VARIANTS}:
+        return True
+
+    # Token check: need wake + up + jarvis-like (rejects "wake up" alone).
+    tokens = normalized.split()
+    has_wake = "wake" in tokens or "wakeup" in tokens
+    has_up = "up" in tokens or "wakeup" in tokens
+    has_jarvis = any(
+        tok.startswith("jarvis") or tok in {"jarvis", "jarvi", "jervis", "jarves"}
+        for tok in tokens
+    )
+    if has_wake and has_up and has_jarvis:
+        return True
+
+    # High fuzzy similarity only (grammar usually makes this unnecessary).
+    ratio = SequenceMatcher(None, normalized, target).ratio()
+    return ratio >= 0.82
+
+
+def build_wake_grammar(wake_phrase: str = config.WAKE_PHRASE) -> str:
+    """JSON grammar list so Vosk prefers the wake phrase over free dictation."""
+    phrases = list(WAKE_PHRASE_VARIANTS)
+    canonical = normalize_speech_text(wake_phrase)
+    if canonical and canonical not in phrases:
+        phrases.insert(0, canonical)
+    phrases.append("[unk]")
+    return json.dumps(phrases)
 
 
 def validate_vosk_model_path(model_path: str | Path) -> Path:
@@ -88,7 +138,6 @@ def validate_vosk_model_path(model_path: str | Path) -> Path:
             "Point config.VOSK_MODEL_PATH at the extracted model folder."
         )
 
-    # A real Vosk model contains these subfolders.
     required = ("am", "conf", "graph")
     missing = [name for name in required if not (path / name).exists()]
     if missing:
@@ -117,15 +166,16 @@ class WakeWordListener:
         self.wake_phrase = wake_phrase
         self.listen_timeout = listen_timeout
         self.start_delay = start_delay
+        self._grammar = build_wake_grammar(wake_phrase)
 
-        SetLogLevel(-1)  # Keep Vosk quiet in the console.
+        SetLogLevel(-1)
         resolved = validate_vosk_model_path(model_path)
         logger.info("Loading Vosk model from %s", resolved)
         try:
             self._model = Model(str(resolved))
         except Exception as exc:  # noqa: BLE001
             raise RuntimeError(f"Failed to load Vosk model at {resolved}: {exc}") from exc
-        logger.info("Vosk model loaded.")
+        logger.info("Vosk model loaded (grammar=%s).", self._grammar)
 
         self._stream: Optional[sd.RawInputStream] = None
 
@@ -142,14 +192,16 @@ class WakeWordListener:
         timeout = self.listen_timeout if timeout is None else timeout
         start_delay = self.start_delay if start_delay is None else start_delay
 
-        # Brief pause so the clap transient is not fed into the recognizer.
         if start_delay > 0:
             time.sleep(start_delay)
 
-        recognizer = KaldiRecognizer(self._model, self.sample_rate)
+        # Grammar biases decoding toward the wake phrase instead of free text
+        # like "the cubs" / "pick up service".
+        recognizer = KaldiRecognizer(self._model, self.sample_rate, self._grammar)
         recognizer.SetWords(False)
 
         last_text = ""
+        last_non_unk = ""
         deadline = time.monotonic() + timeout
 
         try:
@@ -186,28 +238,44 @@ class WakeWordListener:
                 if recognizer.AcceptWaveform(raw):
                     payload = json.loads(recognizer.Result())
                     text = (payload.get("text") or "").strip()
-                    if text:
-                        last_text = text
-                        matched = is_wake_phrase(text, self.wake_phrase)
-                        logger.info("Wake final hypothesis: %r matched=%s", text, matched)
-                        return WakeListenResult(matched=matched, text=text, timed_out=False)
-                else:
-                    partial = json.loads(recognizer.PartialResult())
-                    partial_text = (partial.get("partial") or "").strip()
-                    if partial_text:
-                        last_text = partial_text
+                    if not text or text == "[unk]":
+                        continue
 
-            # Timeout — flush any remaining hypothesis.
+                    last_text = text
+                    last_non_unk = text
+                    matched = is_wake_phrase(text, self.wake_phrase)
+                    logger.info("Wake final hypothesis: %r matched=%s", text, matched)
+                    if matched:
+                        return WakeListenResult(matched=True, text=text, timed_out=False)
+                    # Wrong / partial phrase — keep listening until timeout.
+                    continue
+
+                partial = json.loads(recognizer.PartialResult())
+                partial_text = (partial.get("partial") or "").strip()
+                if partial_text and partial_text != "[unk]":
+                    last_text = partial_text
+                    if is_wake_phrase(partial_text, self.wake_phrase):
+                        # Strong partial match of the full phrase — accept early.
+                        logger.info("Wake partial match: %r", partial_text)
+                        return WakeListenResult(
+                            matched=True,
+                            text=partial_text,
+                            timed_out=False,
+                        )
+
             payload = json.loads(recognizer.FinalResult())
-            text = (payload.get("text") or "").strip() or last_text
+            text = (payload.get("text") or "").strip()
+            if text == "[unk]":
+                text = ""
+            text = text or last_non_unk or last_text
+
+            if text and is_wake_phrase(text, self.wake_phrase):
+                logger.info("Wake timeout match: %r", text)
+                return WakeListenResult(matched=True, text=text, timed_out=False)
+
             if text:
-                matched = is_wake_phrase(text, self.wake_phrase)
-                logger.info(
-                    "Wake timeout with text: %r matched=%s",
-                    text,
-                    matched,
-                )
-                return WakeListenResult(matched=matched, text=text, timed_out=not matched)
+                logger.info("Wake timeout with unmatched text: %r", text)
+                return WakeListenResult(matched=False, text=text, timed_out=True)
 
             logger.info("Wake phrase timeout with no recognized speech.")
             return WakeListenResult(matched=False, text="", timed_out=True)

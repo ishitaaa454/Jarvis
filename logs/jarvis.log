@@ -128,3 +128,89 @@ See models/README.md for exact steps.
 2026-08-03 22:43:25,044 [INFO] jarvis.clap: near-miss: peak=0.063 below threshold=0.080 (crest=3.6 hf=1.69)
 2026-08-03 22:43:40,104 [INFO] jarvis.clap: Interrupted by user (Ctrl+C).
 2026-08-03 22:43:40,253 [INFO] jarvis.clap: Jarvis listener stopped.
+2026-08-03 22:44:57,082 [INFO] jarvis.wake: Loading Vosk model from C:\Users\Ishita Joshi\Desktop\Projects\Jarvis\jarvis-workspace\models\vosk-model-small-en-us-0.15
+2026-08-03 22:44:57,686 [INFO] jarvis.wake: Vosk model loaded.
+2026-08-03 22:44:57,686 [INFO] jarvis.main: State: LISTENING_FOR_CLAPS
+2026-08-03 22:44:57,687 [INFO] jarvis.clap: Jarvis listener started.
+2026-08-03 22:44:57,688 [INFO] jarvis.clap: Starting microphone calibration (3.0s).
+2026-08-03 22:45:00,724 [INFO] jarvis.clap: Calibration complete. ambient_median=0.00003 ambient_p75=0.00012 threshold=0.04500
+2026-08-03 22:45:12,783 [INFO] jarvis.clap: near-miss: peak=0.031 below threshold=0.045 (crest=2.3 hf=0.19)
+2026-08-03 22:45:12,783 [INFO] jarvis.clap: First clap detected.
+2026-08-03 22:45:13,087 [INFO] jarvis.clap: Second clap detected (interval=0.313s).
+2026-08-03 22:45:13,087 [INFO] jarvis.clap: DOUBLE CLAP CONFIRMED.
+2026-08-03 22:45:13,087 [INFO] jarvis.clap: State: DOUBLE_CLAP_DETECTED (handoff requested)
+2026-08-03 22:45:13,290 [INFO] jarvis.clap: Clap microphone paused (released for wake-phrase listening).
+2026-08-03 22:45:13,290 [INFO] jarvis.main: State: LISTENING_FOR_WAKE_PHRASE
+2026-08-03 22:45:20,944 [INFO] jarvis.wake: Wake timeout with text: 'kept out of his' matched=False
+2026-08-03 22:45:21,105 [INFO] jarvis.main: Wake phrase not matched (heard='kept out of his')
+2026-08-03 22:45:21,415 [INFO] jarvis.clap: Clap microphone resumed.
+2026-08-03 22:45:21,416 [INFO] jarvis.clap: State: RETURNING_TO_CLAP_MODE
+2026-08-03 22:45:29,498 [INFO] jarvis.clap: near-miss: peak=0.031 below threshold=0.045 (crest=3.4 hf=1.56)
+2026-08-03 22:45:29,913 [INFO] jarvis.clap: near-miss: peak=0.030 below threshold=0.045 (crest=4.2 hf=1.79)
+2026-08-03 22:45:30,037 [INFO] jarvis.clap: First clap detected.
+2026-08-03 22:45:31,610 [INFO] jarvis.clap: near-miss: peak=0.024 below threshold=0.038 (crest=3.8 hf=1.66)
+2026-08-03 22:45:31,831 [INFO] jarvis.clap: Second clap detected (interval=1.797s).
+2026-08-03 22:45:31,831 [INFO] jarvis.clap: DOUBLE CLAP CONFIRMED.
+2026-08-03 22:45:31,832 [INFO] jarvis.clap: State: DOUBLE_CLAP_DETECTED (handoff requested)
+2026-08-03 22:45:32,052 [INFO] jarvis.clap: Clap microphone paused (released for wake-phrase listening).
+2026-08-03 22:45:32,052 [INFO] jarvis.main: State: LISTENING_FOR_WAKE_PHRASE
+2026-08-03 22:45:37,918 [INFO] jarvis.wake: Wake final hypothesis: 'the cubs out of his' matched=False
+2026-08-03 22:45:38,017 [INFO] jarvis.main: Wake phrase not matched (heard='the cubs out of his')
+2026-08-03 22:45:38,346 [INFO] jarvis.clap: Clap microphone resumed.
+2026-08-03 22:45:38,346 [INFO] jarvis.clap: State: RETURNING_TO_CLAP_MODE
+2026-08-03 22:46:12,175 [INFO] jarvis.clap: near-miss: peak=0.028 below threshold=0.045 (crest=3.4 hf=1.55)
+2026-08-03 22:46:12,616 [INFO] jarvis.clap: near-miss: peak=0.041 below threshold=0.045 (crest=4.0 hf=1.54)
+2026-08-03 22:46:12,743 [INFO] jarvis.clap: First clap detected.
+2026-08-03 22:46:25,292 [INFO] jarvis.clap: near-miss: peak=0.032 below threshold=0.045 (crest=3.2 hf=1.57)
+2026-08-03 22:46:25,414 [INFO] jarvis.clap: First clap detected.
+2026-08-03 22:46:29,134 [INFO] jarvis.clap: near-miss: peak=0.033 below threshold=0.045 (crest=3.8 hf=1.63)
+2026-08-03 22:46:29,223 [INFO] jarvis.clap: First clap detected.
+2026-08-03 22:46:31,211 [INFO] jarvis.clap: near-miss: peak=0.034 below threshold=0.045 (crest=3.3 hf=1.51)
+2026-08-03 22:46:31,335 [INFO] jarvis.clap: First clap detected.
+2026-08-03 22:46:31,853 [INFO] jarvis.clap: near-miss: peak=0.024 below threshold=0.038 (crest=2.9 hf=1.61)
+2026-08-03 22:46:31,854 [INFO] jarvis.clap: Second clap detected (interval=0.515s).
+2026-08-03 22:46:31,854 [INFO] jarvis.clap: DOUBLE CLAP CONFIRMED.
+2026-08-03 22:46:31,856 [INFO] jarvis.clap: State: DOUBLE_CLAP_DETECTED (handoff requested)
+2026-08-03 22:46:32,045 [INFO] jarvis.clap: Clap microphone paused (released for wake-phrase listening).
+2026-08-03 22:46:32,045 [INFO] jarvis.main: State: LISTENING_FOR_WAKE_PHRASE
+2026-08-03 22:46:37,079 [INFO] jarvis.wake: Wake final hypothesis: 'they cubs advice' matched=False
+2026-08-03 22:46:37,193 [INFO] jarvis.main: Wake phrase not matched (heard='they cubs advice')
+2026-08-03 22:46:37,566 [INFO] jarvis.clap: Clap microphone resumed.
+2026-08-03 22:46:37,567 [INFO] jarvis.clap: State: RETURNING_TO_CLAP_MODE
+2026-08-03 22:47:19,858 [INFO] jarvis.clap: near-miss: peak=0.030 below threshold=0.045 (crest=4.0 hf=1.58)
+2026-08-03 22:47:24,428 [INFO] jarvis.clap: near-miss: peak=0.029 below threshold=0.045 (crest=3.1 hf=1.59)
+2026-08-03 22:47:24,563 [INFO] jarvis.clap: First clap detected.
+2026-08-03 22:47:24,881 [INFO] jarvis.clap: near-miss: peak=0.024 below threshold=0.038 (crest=5.1 hf=1.05)
+2026-08-03 22:47:25,067 [INFO] jarvis.clap: Second clap detected (interval=0.516s).
+2026-08-03 22:47:25,068 [INFO] jarvis.clap: DOUBLE CLAP CONFIRMED.
+2026-08-03 22:47:25,069 [INFO] jarvis.clap: State: DOUBLE_CLAP_DETECTED (handoff requested)
+2026-08-03 22:47:25,193 [INFO] jarvis.clap: Clap microphone paused (released for wake-phrase listening).
+2026-08-03 22:47:25,200 [INFO] jarvis.main: State: LISTENING_FOR_WAKE_PHRASE
+2026-08-03 22:47:29,987 [INFO] jarvis.wake: Wake final hypothesis: 'pick up service' matched=False
+2026-08-03 22:47:30,059 [INFO] jarvis.main: Wake phrase not matched (heard='pick up service')
+2026-08-03 22:47:30,164 [INFO] jarvis.clap: Clap microphone resumed.
+2026-08-03 22:47:30,168 [INFO] jarvis.clap: State: RETURNING_TO_CLAP_MODE
+2026-08-03 22:47:36,902 [INFO] jarvis.clap: Interrupted by user (Ctrl+C).
+2026-08-03 22:47:36,965 [INFO] jarvis.clap: Jarvis listener stopped.
+2026-08-03 22:49:28,944 [INFO] jarvis.wake: Loading Vosk model from C:\Users\Ishita Joshi\Desktop\Projects\Jarvis\jarvis-workspace\models\vosk-model-small-en-us-0.15
+2026-08-03 22:49:29,959 [INFO] jarvis.wake: Vosk model loaded.
+2026-08-03 22:49:29,961 [INFO] jarvis.main: State: LISTENING_FOR_CLAPS
+2026-08-03 22:49:29,961 [INFO] jarvis.clap: Jarvis listener started.
+2026-08-03 22:49:29,961 [INFO] jarvis.clap: Starting microphone calibration (3.0s).
+2026-08-03 22:49:32,983 [INFO] jarvis.clap: Calibration complete. ambient_median=0.00003 ambient_p75=0.00003 threshold=0.04500
+2026-08-03 22:50:08,312 [INFO] jarvis.clap: near-miss: peak=0.029 below threshold=0.045 (crest=5.2 hf=1.78)
+2026-08-03 22:50:08,472 [INFO] jarvis.clap: First clap detected.
+2026-08-03 22:50:19,710 [INFO] jarvis.clap: near-miss: peak=0.026 below threshold=0.045 (crest=3.0 hf=1.58)
+2026-08-03 22:50:19,806 [INFO] jarvis.clap: First clap detected.
+2026-08-03 22:50:20,251 [INFO] jarvis.clap: near-miss: peak=0.031 below threshold=0.038 (crest=3.2 hf=1.61)
+2026-08-03 22:50:20,251 [INFO] jarvis.clap: Second clap detected (interval=0.454s).
+2026-08-03 22:50:20,251 [INFO] jarvis.clap: DOUBLE CLAP CONFIRMED.
+2026-08-03 22:50:20,252 [INFO] jarvis.clap: State: DOUBLE_CLAP_DETECTED (handoff requested)
+2026-08-03 22:50:20,401 [INFO] jarvis.clap: Clap microphone paused (released for wake-phrase listening).
+2026-08-03 22:50:20,410 [INFO] jarvis.main: State: LISTENING_FOR_WAKE_PHRASE
+2026-08-03 22:50:26,308 [INFO] jarvis.wake: Wake final hypothesis: 'the cubs' matched=False
+2026-08-03 22:50:26,392 [INFO] jarvis.main: Wake phrase not matched (heard='the cubs')
+2026-08-03 22:50:26,526 [INFO] jarvis.clap: Clap microphone resumed.
+2026-08-03 22:50:26,529 [INFO] jarvis.clap: State: RETURNING_TO_CLAP_MODE
+2026-08-03 22:50:37,298 [INFO] jarvis.clap: Interrupted by user (Ctrl+C).
+2026-08-03 22:50:37,423 [INFO] jarvis.clap: Jarvis listener stopped.

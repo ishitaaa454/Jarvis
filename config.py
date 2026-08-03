@@ -55,7 +55,7 @@ MIN_CREST_FACTOR = 1.8
 MIN_HF_RATIO = 0.10
 
 # Set True while tuning; leave False for normal use.
-DEBUG_NEAR_MISSES = True
+DEBUG_NEAR_MISSES = False
 
 # ---------------------------------------------------------------------------
 # Wake-phrase recognition (Vosk, offline)
@@ -71,7 +71,7 @@ WAKE_PHRASE = "wake up jarvis"
 WAKE_LISTEN_TIMEOUT = 7.0
 
 # Delay after double clap before opening the speech mic (avoids clap-as-speech).
-WAKE_START_DELAY = 0.3
+WAKE_START_DELAY = 0.5
 
 # Sample rate for Vosk (must match the model; small en-us models use 16 kHz).
 SPEECH_SAMPLE_RATE = 16000
