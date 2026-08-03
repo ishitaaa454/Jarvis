@@ -114,3 +114,17 @@ See models/README.md for exact steps.
 2026-08-03 22:39:59,400 [INFO] jarvis.clap: First clap detected.
 2026-08-03 22:40:08,525 [INFO] jarvis.clap: Interrupted by user (Ctrl+C).
 2026-08-03 22:40:08,699 [INFO] jarvis.clap: Jarvis listener stopped.
+2026-08-03 22:42:35,303 [INFO] jarvis.wake: Loading Vosk model from C:\Users\Ishita Joshi\Desktop\Projects\Jarvis\jarvis-workspace\models\vosk-model-small-en-us-0.15
+2026-08-03 22:42:35,853 [INFO] jarvis.wake: Vosk model loaded.
+2026-08-03 22:42:35,853 [INFO] jarvis.main: State: LISTENING_FOR_CLAPS
+2026-08-03 22:42:35,854 [INFO] jarvis.clap: Jarvis listener started.
+2026-08-03 22:42:35,854 [INFO] jarvis.clap: Starting microphone calibration (3.0s).
+2026-08-03 22:42:38,888 [INFO] jarvis.clap: Calibration complete. ambient_median=0.00003 ambient_p75=0.00003 threshold=0.08000
+2026-08-03 22:42:41,875 [INFO] jarvis.clap: near-miss: peak=0.047 below threshold=0.080 (crest=3.0 hf=1.69)
+2026-08-03 22:42:47,855 [INFO] jarvis.clap: near-miss: peak=0.047 below threshold=0.080 (crest=3.4 hf=1.67)
+2026-08-03 22:42:52,975 [INFO] jarvis.clap: near-miss: peak=0.054 below threshold=0.080 (crest=3.4 hf=1.55)
+2026-08-03 22:43:21,202 [INFO] jarvis.clap: near-miss: peak=0.069 below threshold=0.080 (crest=2.6 hf=0.47)
+2026-08-03 22:43:21,652 [INFO] jarvis.clap: near-miss: peak=0.067 below threshold=0.080 (crest=2.6 hf=0.12)
+2026-08-03 22:43:25,044 [INFO] jarvis.clap: near-miss: peak=0.063 below threshold=0.080 (crest=3.6 hf=1.69)
+2026-08-03 22:43:40,104 [INFO] jarvis.clap: Interrupted by user (Ctrl+C).
+2026-08-03 22:43:40,253 [INFO] jarvis.clap: Jarvis listener stopped.

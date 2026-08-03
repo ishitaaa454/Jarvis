@@ -25,8 +25,8 @@ CALIBRATION_DURATION = 3.0
 THRESHOLD_MULTIPLIER = 3.0
 
 # Absolute minimum peak for a clap candidate.
-# Your claps often land around 0.08–0.21 on this laptop mic.
-MIN_THRESHOLD = 0.08
+# Current mic levels show real claps around 0.05–0.07.
+MIN_THRESHOLD = 0.045
 
 # Cap so a noisy calibration cannot block real claps.
 MAX_THRESHOLD = 0.30
