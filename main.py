@@ -1,8 +1,14 @@
 """
-Jarvis workspace assistant — double-clap listener entry point.
+Jarvis workspace assistant — double-clap + offline wake-phrase entry point.
 
-This step only detects a reliable double clap on the default Windows microphone.
-No voice recognition, TTS, dashboard, or cloud APIs.
+Flow:
+  LISTENING_FOR_CLAPS
+    → DOUBLE_CLAP_DETECTED
+    → LISTENING_FOR_WAKE_PHRASE
+    → JARVIS_ACTIVATED  (or timeout / mismatch)
+    → RETURNING_TO_CLAP_MODE
+
+No TTS, dashboard, app launching, or cloud APIs in this step.
 """
 
 from __future__ import annotations
@@ -15,7 +21,7 @@ from pathlib import Path
 def _check_dependencies() -> None:
     """Fail early with a clear message if required packages are missing."""
     missing: list[str] = []
-    for package in ("numpy", "sounddevice"):
+    for package in ("numpy", "sounddevice", "vosk"):
         try:
             __import__(package)
         except ImportError:
@@ -51,15 +57,79 @@ def main() -> None:
     _check_dependencies()
     _setup_logging()
 
-    # Import after dependency check so ImportError messages stay user-friendly.
+    import config
     from clap_detector import ClapDetector
+    from wake_word_listener import WakeWordListener, validate_vosk_model_path
+
+    logger = logging.getLogger("jarvis.main")
+
+    # Validate and load the Vosk model once at startup (not on every clap).
+    try:
+        validate_vosk_model_path(config.VOSK_MODEL_PATH)
+        wake_listener = WakeWordListener()
+    except (FileNotFoundError, NotADirectoryError, RuntimeError) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        logger.error("%s", exc)
+        raise SystemExit(1) from exc
+
+    state = "LISTENING_FOR_CLAPS"
+    logger.info("State: %s", state)
 
     def on_double_clap() -> None:
-        # Callback hook for future Jarvis actions (kept minimal for this step).
         print("DOUBLE CLAP CONFIRMED.")
 
-    detector = ClapDetector(on_double_clap=on_double_clap)
-    detector.start()
+    def on_after_double_clap() -> None:
+        """
+        Runs on the clap detector's main loop after the clap mic is paused.
+
+        Mic ownership at this point:
+          - clap InputStream is closed
+          - wake RawInputStream may open exclusively
+          - wake stream is closed before this returns
+          - clap detector then resumes its InputStream
+        """
+        nonlocal state
+        state = "LISTENING_FOR_WAKE_PHRASE"
+        print("Listening for wake phrase...")
+        logger.info("State: %s", state)
+
+        try:
+            result = wake_listener.listen_for_wake_phrase()
+        except (PermissionError, RuntimeError) as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            logger.exception("Wake-phrase listening failed.")
+            state = "RETURNING_TO_CLAP_MODE"
+            return
+
+        if result.matched:
+            print(f"Heard: {result.text}")
+            print("WAKE PHRASE CONFIRMED.")
+            print("Jarvis activated.")
+            state = "JARVIS_ACTIVATED"
+            logger.info("State: %s (heard=%r)", state, result.text)
+        elif result.timed_out and not result.text:
+            print("Wake phrase timeout.")
+            logger.info("Wake phrase timeout.")
+            state = "RETURNING_TO_CLAP_MODE"
+        elif result.text:
+            print(f"Heard: {result.text}")
+            print("Wake phrase not matched.")
+            logger.info("Wake phrase not matched (heard=%r)", result.text)
+            state = "RETURNING_TO_CLAP_MODE"
+        else:
+            print("Wake phrase timeout.")
+            logger.info("Wake phrase timeout (empty recognition).")
+            state = "RETURNING_TO_CLAP_MODE"
+
+    detector = ClapDetector(
+        on_double_clap=on_double_clap,
+        on_after_double_clap=on_after_double_clap,
+    )
+
+    try:
+        detector.start()
+    finally:
+        wake_listener.close()
 
 
 if __name__ == "__main__":

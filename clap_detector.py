@@ -54,6 +54,7 @@ class ClapDetector:
     def __init__(
         self,
         on_double_clap: Optional[Callable[[], None]] = None,
+        on_after_double_clap: Optional[Callable[[], None]] = None,
         sample_rate: int = config.SAMPLE_RATE,
         block_size: int = config.BLOCK_SIZE,
         calibration_duration: float = config.CALIBRATION_DURATION,
@@ -71,6 +72,9 @@ class ClapDetector:
         debug_near_misses: bool = config.DEBUG_NEAR_MISSES,
     ) -> None:
         self.on_double_clap = on_double_clap
+        # Called on the main listener loop (NOT the PortAudio callback thread)
+        # after the clap mic has been paused — use this for wake-phrase listening.
+        self.on_after_double_clap = on_after_double_clap
         self.sample_rate = sample_rate
         self.block_size = block_size
         self.calibration_duration = calibration_duration
@@ -90,6 +94,8 @@ class ClapDetector:
         self.threshold: float = min_threshold
         self._running = False
         self._stream: Optional[sd.InputStream] = None
+        self._paused = False
+        self._handoff_requested = False
 
         self._calibrating = False
         self._calibration_peaks: list[float] = []
@@ -150,11 +156,78 @@ class ClapDetector:
                         logger.debug("Double-clap window expired; resetting.")
                         self._awaiting_second = False
                         self._last_clap_time = None
+
+                # Microphone handoff runs on this loop (not the audio callback).
+                if self._handoff_requested:
+                    self._handoff_requested = False
+                    self._run_post_clap_handoff()
         except KeyboardInterrupt:
             print("\nStopping Jarvis listener...")
             logger.info("Interrupted by user (Ctrl+C).")
         finally:
             self.stop()
+
+    def pause_microphone(self) -> None:
+        """
+        Release the mic so another listener (wake phrase) can open it.
+
+        Clap analysis is suspended until resume_microphone().
+        """
+        if self._stream is None:
+            self._paused = True
+            return
+        try:
+            self._stream.stop()
+            self._stream.close()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Error while pausing clap microphone: %s", exc)
+        self._stream = None
+        self._paused = True
+        # Reset in-flight clap state so resume starts clean.
+        self._above_threshold = False
+        self._awaiting_second = False
+        self._last_clap_time = None
+        self._recent_peaks.clear()
+        logger.info("Clap microphone paused (released for wake-phrase listening).")
+
+    def resume_microphone(self) -> None:
+        """Re-open the clap mic after the wake listener has closed its stream."""
+        if not self._running:
+            return
+        if self._stream is not None:
+            self._paused = False
+            return
+        try:
+            self._stream = sd.InputStream(
+                samplerate=self.sample_rate,
+                blocksize=self.block_size,
+                channels=1,
+                dtype="float32",
+                callback=self._audio_callback,
+            )
+            self._stream.start()
+            self._paused = False
+            # Brief cooldown after wake cycle so residual speech is not a clap.
+            self._cooldown_until = time.monotonic() + self.cooldown_duration
+            logger.info("Clap microphone resumed.")
+        except Exception as exc:  # noqa: BLE001
+            self._fail(f"Audio stream failure while resuming clap detection: {exc}", exc)
+
+    def _run_post_clap_handoff(self) -> None:
+        """Pause clap mic → run wake handler → resume clap mic."""
+        # --- MIC HANDOFF: clap detector releases the device first ---
+        self.pause_microphone()
+        try:
+            if self.on_after_double_clap is not None:
+                self.on_after_double_clap()
+        except Exception:  # noqa: BLE001
+            logger.exception("Error in on_after_double_clap callback.")
+        finally:
+            # --- MIC HANDOFF: clap detector reclaims the device ---
+            if self._running:
+                self.resume_microphone()
+                print("Returning to clap detection.")
+                logger.info("State: RETURNING_TO_CLAP_MODE")
 
     def stop(self) -> None:
         self._running = False
@@ -165,6 +238,7 @@ class ClapDetector:
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Error while closing audio stream: %s", exc)
             self._stream = None
+        self._paused = False
         logger.info("Jarvis listener stopped.")
 
     def _ensure_microphone_available(self) -> None:
@@ -208,6 +282,9 @@ class ClapDetector:
         if status:
             logger.warning("Audio stream status: %s", status)
 
+        if self._paused or self._handoff_requested:
+            return
+
         samples = indata[:, 0] if indata.ndim > 1 else indata.flatten()
         peak, _rms, crest, hf_ratio = _block_features(samples)
         now = time.monotonic()
@@ -250,7 +327,7 @@ class ClapDetector:
         print("  Tip: stay silent during calibration.")
         if self.debug_near_misses:
             print("  Debug near-misses: ON (clap once — watch for [near-miss] lines)")
-        print("Listening for double claps...")
+        print("Listening for double clap...")
         logger.info(
             "Calibration complete. ambient_median=%.5f ambient_p75=%.5f threshold=%.5f",
             ambient_median,
@@ -368,9 +445,8 @@ class ClapDetector:
 
         self._awaiting_second = False
         self._last_clap_time = None
-        self._cooldown_until = now + self.cooldown_duration
 
-        logger.info("DOUBLE CLAP CONFIRMED. Cooldown %.1fs.", self.cooldown_duration)
+        logger.info("DOUBLE CLAP CONFIRMED.")
 
         if self.on_double_clap is not None:
             try:
@@ -380,4 +456,11 @@ class ClapDetector:
         else:
             print("DOUBLE CLAP CONFIRMED.")
 
-        print("Cooldown active...")
+        if self.on_after_double_clap is not None:
+            # Defer cooldown / wake work to the main loop after mic pause.
+            self._cooldown_until = 0.0
+            self._handoff_requested = True
+            logger.info("State: DOUBLE_CLAP_DETECTED (handoff requested)")
+        else:
+            self._cooldown_until = now + self.cooldown_duration
+            print("Cooldown active...")

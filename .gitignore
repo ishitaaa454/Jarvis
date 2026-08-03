@@ -16,6 +16,10 @@ build/
 logs/*.log
 logs/*.txt
 
+# Large Vosk model files (keep models/README.md)
+models/*
+!models/README.md
+
 # OS / editor
 .DS_Store
 Thumbs.db

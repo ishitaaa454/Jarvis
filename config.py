@@ -1,13 +1,16 @@
 """
-Configurable constants for double-clap detection.
+Configurable constants for double-clap detection and wake-phrase listening.
 
-Tune THRESHOLD_MULTIPLIER / MIN_THRESHOLD for sensitivity:
-  - Higher  => fewer false positives
-  - Lower   => easier to trigger
+Clap sensitivity:
+  - Higher THRESHOLD_MULTIPLIER / MIN_THRESHOLD => fewer false positives
+  - Lower  => easier to trigger
 
-Set DEBUG_NEAR_MISSES = True to print why loud sounds were rejected
-(useful while tuning; turn off afterward).
+Set DEBUG_NEAR_MISSES = True to print why loud sounds were rejected.
 """
+
+# ---------------------------------------------------------------------------
+# Clap detection
+# ---------------------------------------------------------------------------
 
 # Microphone sample rate in Hz.
 SAMPLE_RATE = 16000
@@ -22,7 +25,6 @@ CALIBRATION_DURATION = 3.0
 THRESHOLD_MULTIPLIER = 3.5
 
 # Absolute minimum peak for a clap candidate.
-# Your claps often measure ~0.10–0.21.
 MIN_THRESHOLD = 0.10
 
 # Cap so a noisy calibration cannot block real claps.
@@ -32,7 +34,7 @@ MAX_THRESHOLD = 0.35
 MIN_CLAP_INTERVAL = 0.18
 MAX_CLAP_INTERVAL = 1.5
 
-# Ignore new claps after a confirmed double clap.
+# Ignore new claps after a confirmed double clap / wake cycle.
 COOLDOWN_DURATION = 3.0
 
 # Max length of one clap transient.
@@ -42,7 +44,6 @@ MAX_CLAP_DURATION = 0.35
 CLAP_REFRACTORY = 0.12
 
 # Peak must rise this much vs recent quiet baseline (first clap only).
-# Second clap skips this check — baseline is often still elevated.
 MIN_RISE_RATIO = 1.8
 
 # Crest factor = peak / RMS (impulsive sounds are higher).
@@ -54,5 +55,30 @@ MIN_HF_RATIO = 0.15
 # Set True while tuning; leave False for normal use.
 DEBUG_NEAR_MISSES = False
 
-# Log file relative to the project root.
+# ---------------------------------------------------------------------------
+# Wake-phrase recognition (Vosk, offline)
+# ---------------------------------------------------------------------------
+
+# Folder containing the extracted Vosk model (see models/README.md).
+VOSK_MODEL_PATH = "models/vosk-model-small-en-us-0.15"
+
+# Canonical wake phrase (matching is normalized; variants are accepted).
+WAKE_PHRASE = "wake up jarvis"
+
+# Seconds allowed to speak the wake phrase after a double clap.
+WAKE_LISTEN_TIMEOUT = 7.0
+
+# Delay after double clap before opening the speech mic (avoids clap-as-speech).
+WAKE_START_DELAY = 0.3
+
+# Sample rate for Vosk (must match the model; small en-us models use 16 kHz).
+SPEECH_SAMPLE_RATE = 16000
+
+# Audio block size for the wake-phrase stream (frames).
+SPEECH_BLOCK_SIZE = 4000
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+
 LOG_FILE = "logs/jarvis.log"
