@@ -25,8 +25,8 @@ CALIBRATION_DURATION = 3.0
 THRESHOLD_MULTIPLIER = 3.0
 
 # Absolute minimum peak for a clap candidate.
-# Current mic levels show real claps around 0.05–0.07.
-MIN_THRESHOLD = 0.045
+# Recent runs show real claps at ~0.026–0.034 on this mic.
+MIN_THRESHOLD = 0.025
 
 # Cap so a noisy calibration cannot block real claps.
 MAX_THRESHOLD = 0.30
@@ -39,23 +39,22 @@ MAX_CLAP_INTERVAL = 1.8
 COOLDOWN_DURATION = 3.0
 
 # Max length of one clap transient.
-MAX_CLAP_DURATION = 0.40
+MAX_CLAP_DURATION = 0.45
 
 # Debounce after a counted clap.
-CLAP_REFRACTORY = 0.10
+CLAP_REFRACTORY = 0.08
 
 # Peak must rise this much vs recent quiet baseline (first clap only).
-# Kept low — laptop AGC often leaves an elevated baseline after a clap.
-MIN_RISE_RATIO = 1.3
+MIN_RISE_RATIO = 1.2
 
 # Crest factor = peak / RMS (impulsive sounds are higher).
-MIN_CREST_FACTOR = 1.8
+MIN_CREST_FACTOR = 1.6
 
 # High-frequency proxy via sample differences / RMS.
-MIN_HF_RATIO = 0.10
+MIN_HF_RATIO = 0.08
 
 # Set True while tuning; leave False for normal use.
-DEBUG_NEAR_MISSES = False
+DEBUG_NEAR_MISSES = True
 
 # ---------------------------------------------------------------------------
 # Wake-phrase recognition (Vosk, offline)

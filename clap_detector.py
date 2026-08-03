@@ -351,7 +351,7 @@ class ClapDetector:
 
         # Second clap is often quieter / against an elevated mic baseline.
         effective_threshold = (
-            self.threshold * 0.85 if self._awaiting_second else self.threshold
+            self.threshold * 0.75 if self._awaiting_second else self.threshold
         )
 
         # Enter / continue a loud peak based on amplitude only.

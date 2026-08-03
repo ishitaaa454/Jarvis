@@ -214,3 +214,11 @@ See models/README.md for exact steps.
 2026-08-03 22:50:26,529 [INFO] jarvis.clap: State: RETURNING_TO_CLAP_MODE
 2026-08-03 22:50:37,298 [INFO] jarvis.clap: Interrupted by user (Ctrl+C).
 2026-08-03 22:50:37,423 [INFO] jarvis.clap: Jarvis listener stopped.
+2026-08-03 23:02:23,873 [INFO] jarvis.wake: Loading Vosk model from C:\Users\Ishita Joshi\Desktop\Projects\Jarvis\jarvis-workspace\models\vosk-model-small-en-us-0.15
+2026-08-03 23:02:24,950 [INFO] jarvis.wake: Vosk model loaded (grammar=["wake up jarvis", "wake up, jarvis", "wakeup jarvis", "[unk]"]).
+2026-08-03 23:02:24,950 [INFO] jarvis.main: State: LISTENING_FOR_CLAPS
+2026-08-03 23:02:24,951 [INFO] jarvis.clap: Jarvis listener started.
+2026-08-03 23:02:24,951 [INFO] jarvis.clap: Starting microphone calibration (3.0s).
+2026-08-03 23:02:27,985 [INFO] jarvis.clap: Calibration complete. ambient_median=0.00003 ambient_p75=0.00014 threshold=0.04500
+2026-08-03 23:03:18,508 [INFO] jarvis.clap: Interrupted by user (Ctrl+C).
+2026-08-03 23:03:18,677 [INFO] jarvis.clap: Jarvis listener stopped.
