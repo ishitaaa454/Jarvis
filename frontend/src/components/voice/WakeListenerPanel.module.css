@@ -1,0 +1,110 @@
+.panel {
+  padding: 1.1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.header h2 {
+  font-size: 0.95rem;
+  color: var(--cyan);
+  letter-spacing: 0.08em;
+}
+
+.live {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 1rem;
+  margin: 0;
+}
+
+.meta dt {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.meta dd {
+  margin: 0.2rem 0 0;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.85rem;
+}
+
+.hint {
+  margin: 0;
+  color: var(--warning);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.hint code {
+  font-size: 0.78rem;
+  color: var(--cyan);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.button,
+.buttonSecondary {
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  padding: 0.55rem 0.9rem;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: opacity 0.2s ease, border-color 0.2s ease;
+}
+
+.button {
+  background: rgba(79, 210, 255, 0.16);
+  color: var(--text-primary);
+}
+
+.buttonSecondary {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border-subtle);
+}
+
+.button:disabled,
+.buttonSecondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.button:not(:disabled):hover,
+.buttonSecondary:not(:disabled):hover {
+  border-color: var(--cyan);
+  color: var(--text-primary);
+}
+
+@media (max-width: 640px) {
+  .meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .buttonSecondary {
+    transition: none;
+  }
+}

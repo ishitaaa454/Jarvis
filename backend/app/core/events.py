@@ -45,3 +45,8 @@ class EventBus:
 STATE_CHANGED = "state.changed"
 CLIENT_CONNECTED = "client.connected"
 CLIENT_DISCONNECTED = "client.disconnected"
+
+# Phase 2 voice events
+VOICE_STATUS_CHANGED = "voice.status_changed"
+VOICE_WAKE_DETECTED = "voice.wake_detected"
+VOICE_ERROR = "voice.error"

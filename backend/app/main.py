@@ -1,4 +1,4 @@
-"""FastAPI application entrypoint for Jarvis Workspace Phase 1."""
+"""FastAPI application entrypoint for Jarvis Workspace."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api import health, websocket
+from app.api import health, voice, websocket
 from app.api.websocket import ConnectionManager, register_websocket_broadcasts
 from app.core.config import get_settings
 from app.core.events import EventBus
@@ -20,9 +20,9 @@ from app.core.logging_config import setup_logging
 from app.core.state_manager import StateManager
 from app.models.assistant_state import AssistantState
 from app.services.placeholders.integration_service import IntegrationService
-from app.services.placeholders.voice_service import VoiceService
 from app.services.placeholders.workspace_service import WorkspaceService
 from app.services.system_service import SystemService
+from app.services.voice import VoiceService
 
 logger = logging.getLogger(__name__)
 
@@ -42,20 +42,36 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger.exception("Failed to warm CPU sampler")
 
     if getattr(app.state, "state_broadcast_handler", None) is None:
-        handler = await register_websocket_broadcasts(
+        handlers = await register_websocket_broadcasts(
             app.state.event_bus,
             app.state.connection_manager,
         )
-        app.state.state_broadcast_handler = handler
+        app.state.state_broadcast_handler = handlers
 
     state_manager: StateManager = app.state.state_manager
+    voice_service: VoiceService = app.state.voice_service
+    voice_service.bind(
+        state_manager=state_manager,
+        event_bus=app.state.event_bus,
+    )
+
     await state_manager.set_state(AssistantState.STARTING)
     await state_manager.set_state(AssistantState.IDLE)
     logger.info("Backend ready (state=IDLE)")
 
+    try:
+        await voice_service.on_startup()
+    except Exception:
+        logger.exception("Voice service startup failed — continuing without listener")
+
     yield
 
     logger.info("Backend shutdown requested")
+    try:
+        await voice_service.shutdown()
+    except Exception:
+        logger.exception("Voice service shutdown failed")
+
     try:
         await state_manager.set_state(AssistantState.SHUTTING_DOWN)
     except Exception:
@@ -76,12 +92,13 @@ def create_app() -> FastAPI:
     event_bus = EventBus()
     state_manager = StateManager(event_bus)
     connection_manager = ConnectionManager()
+    voice_service = VoiceService(settings=settings)
 
     app.state.event_bus = event_bus
     app.state.state_manager = state_manager
     app.state.connection_manager = connection_manager
     app.state.system_service = SystemService()
-    app.state.voice_service = VoiceService()
+    app.state.voice_service = voice_service
     app.state.workspace_service = WorkspaceService()
     app.state.integration_service = IntegrationService()
     app.state.state_broadcast_handler = None
@@ -95,6 +112,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(health.router)
+    app.include_router(voice.router)
     app.include_router(websocket.router)
 
     @app.exception_handler(StarletteHTTPException)

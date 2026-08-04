@@ -65,3 +65,7 @@ def test_websocket_receives_connection_event(client: TestClient) -> None:
         state_message = websocket.receive_json()
         assert state_message["type"] == "state.changed"
         assert "state" in state_message["payload"]
+
+        voice_message = websocket.receive_json()
+        assert voice_message["type"] == "voice.status_changed"
+        assert "status" in voice_message["payload"]

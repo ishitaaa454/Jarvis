@@ -4,3 +4,6 @@ pydantic==2.10.4
 pydantic-settings==2.7.0
 psutil==6.1.1
 python-dotenv==1.0.1
+vosk==0.3.45
+sounddevice==0.5.1
+numpy==2.2.2

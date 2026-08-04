@@ -1,13 +1,19 @@
 import { useEffect, useState } from 'react';
 
 import { MetricCard } from '../components/common/MetricCard';
+import { describeVoiceStatus } from '../hooks/useVoiceStatus';
 import { environment } from '../config/environment';
 import { fetchHealth } from '../services/api';
+import type { VoiceStatus } from '../types/voice';
 import styles from './SystemPage.module.css';
 
 const LATER = 'Available in a later phase';
 
-export function SystemPage() {
+interface SystemPageProps {
+  voiceStatus: VoiceStatus | null;
+}
+
+export function SystemPage({ voiceStatus }: SystemPageProps) {
   const [cpu, setCpu] = useState<number | null>(null);
   const [memory, setMemory] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,6 +44,23 @@ export function SystemPage() {
     };
   }, []);
 
+  const micActive =
+    voiceStatus?.status === 'LISTENING' || voiceStatus?.status === 'ACTIVATION_DETECTED';
+  const micLabel = !voiceStatus
+    ? 'Unknown'
+    : micActive
+      ? 'Active'
+      : voiceStatus.microphone?.name
+        ? 'Idle'
+        : 'Unavailable';
+
+  const modelLabel =
+    voiceStatus?.status === 'MODEL_MISSING'
+      ? 'Missing'
+      : voiceStatus?.model_loaded
+        ? 'Loaded'
+        : 'Not loaded';
+
   return (
     <div className={styles.page}>
       <header>
@@ -66,6 +89,36 @@ export function SystemPage() {
         <MetricCard title="Battery" value={null} placeholder={LATER} />
         <MetricCard title="Running processes" value={null} placeholder={LATER} />
       </div>
+
+      <section className={`glass-panel ${styles.voiceTable}`} aria-labelledby="voice-components">
+        <h2 id="voice-components">Voice components</h2>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Component</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Microphone</td>
+              <td>{micLabel}</td>
+            </tr>
+            <tr>
+              <td>Wake listener</td>
+              <td>{describeVoiceStatus(voiceStatus?.status)}</td>
+            </tr>
+            <tr>
+              <td>Vosk model</td>
+              <td>{modelLabel}</td>
+            </tr>
+            <tr>
+              <td>Voice processing</td>
+              <td>Local / Offline</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
     </div>
   );
 }

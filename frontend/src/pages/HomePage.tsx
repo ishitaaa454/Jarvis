@@ -4,22 +4,39 @@ import { ActivityLog } from '../components/jarvis/ActivityLog';
 import { JarvisCorePlaceholder } from '../components/jarvis/JarvisCorePlaceholder';
 import { MetricCard } from '../components/common/MetricCard';
 import { StatusBadge } from '../components/common/StatusBadge';
+import { VoiceActivationBanner } from '../components/voice/VoiceActivationBanner';
+import { WakeListenerPanel } from '../components/voice/WakeListenerPanel';
 import { environment } from '../config/environment';
 import { fetchHealth } from '../services/api';
 import type { ConnectionStatus } from '../types/assistant';
 import type { ActivityEntry } from '../types/messages';
+import type { VoiceStatus } from '../types/voice';
 import styles from './HomePage.module.css';
 
 interface HomePageProps {
   connectionStatus: ConnectionStatus;
   assistantState: string | null;
   activity: ActivityEntry[];
+  voiceStatus: VoiceStatus | null;
+  voiceLoading: boolean;
+  voiceError: string | null;
+  voicePending: boolean;
+  activationVisible: boolean;
+  onStartListener: () => void;
+  onStopListener: () => void;
 }
 
 export function HomePage({
   connectionStatus,
   assistantState,
   activity,
+  voiceStatus,
+  voiceLoading,
+  voiceError,
+  voicePending,
+  activationVisible,
+  onStartListener,
+  onStopListener,
 }: HomePageProps) {
   const [now, setNow] = useState(() => new Date());
   const [cpu, setCpu] = useState<number | null>(null);
@@ -70,8 +87,10 @@ export function HomePage({
         <p className={styles.subheading}>PERSONAL SYSTEM INTERFACE</p>
       </header>
 
+      <VoiceActivationBanner visible={activationVisible} />
+
       <div className={styles.coreWrap}>
-        <JarvisCorePlaceholder connected={connected} />
+        <JarvisCorePlaceholder connected={connected} activated={activationVisible} />
       </div>
 
       <section className={styles.statusRow}>
@@ -83,6 +102,15 @@ export function HomePage({
         />
         <StatusBadge label="Local Time" value={now.toLocaleTimeString()} />
       </section>
+
+      <WakeListenerPanel
+        voiceStatus={voiceStatus}
+        loading={voiceLoading}
+        error={voiceError}
+        pending={voicePending}
+        onStart={onStartListener}
+        onStop={onStopListener}
+      />
 
       <section className={styles.metrics}>
         <MetricCard

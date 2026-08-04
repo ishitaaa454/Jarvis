@@ -9,3 +9,40 @@
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 0.85rem;
 }
+
+.voiceTable {
+  padding: 1.1rem;
+}
+
+.voiceTable h2 {
+  font-size: 0.95rem;
+  color: var(--cyan);
+  margin-bottom: 0.75rem;
+}
+
+.voiceTable table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.voiceTable th,
+.voiceTable td {
+  text-align: left;
+  padding: 0.55rem 0.35rem;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.88rem;
+}
+
+.voiceTable th {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.voiceTable td:last-child {
+  color: var(--cyan);
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
+}

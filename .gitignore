@@ -21,6 +21,12 @@ backend/logs/*.log.*
 !backend/logs/.gitkeep
 *.log
 
+# Vosk speech models (download locally — see backend/models/README.md)
+backend/models/vosk-*/
+backend/models/**
+!backend/models/README.md
+!backend/models/.gitkeep
+
 # Node / frontend
 frontend/node_modules/
 frontend/dist/

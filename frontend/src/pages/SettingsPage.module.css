@@ -44,3 +44,82 @@
   color: var(--text-muted);
   padding: 0.55rem 0.7rem;
 }
+
+.voiceGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.field input,
+.field select {
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: rgba(5, 10, 18, 0.8);
+  color: var(--text-primary);
+  padding: 0.55rem 0.7rem;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.stat strong {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.35rem;
+}
+
+.actionBtn,
+.actionBtnSecondary {
+  border-radius: 8px;
+  padding: 0.5rem 0.85rem;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.actionBtn {
+  border: 1px solid var(--border-strong);
+  background: rgba(79, 210, 255, 0.16);
+  color: var(--text-primary);
+}
+
+.actionBtnSecondary {
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.actionBtn:disabled,
+.actionBtnSecondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.85rem;
+}

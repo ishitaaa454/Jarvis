@@ -1,0 +1,40 @@
+.banner {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: opacity 0.35s ease, transform 0.35s ease, border-color 0.35s ease;
+  background: linear-gradient(
+    90deg,
+    rgba(79, 210, 255, 0.05),
+    rgba(79, 210, 255, 0.18),
+    rgba(79, 210, 255, 0.05)
+  );
+}
+
+.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-glow);
+}
+
+.label {
+  font-family: var(--font-display);
+  letter-spacing: 0.22em;
+  font-size: clamp(0.75rem, 2vw, 0.95rem);
+  color: var(--cyan);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner {
+    transition: none;
+    transform: none;
+  }
+}

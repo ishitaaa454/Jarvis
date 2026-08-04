@@ -8,9 +8,17 @@ from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from app.core.events import STATE_CHANGED, EventBus
+from app.core.events import (
+    STATE_CHANGED,
+    VOICE_ERROR,
+    VOICE_STATUS_CHANGED,
+    VOICE_WAKE_DETECTED,
+    EventBus,
+)
 from app.core.state_manager import StateManager
+from app.models.voice import voice_status_to_ws_payload
 from app.models.websocket_message import WebSocketMessage
+from app.services.voice.voice_service import VoiceService
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +62,7 @@ class ConnectionManager:
             await self.disconnect(websocket)
 
 
-def create_state_change_handler(
-    manager: ConnectionManager,
-) -> Any:
+def create_state_change_handler(manager: ConnectionManager) -> Any:
     """Build an event-bus handler that broadcasts state changes."""
 
     async def _on_state_changed(payload: dict[str, Any]) -> None:
@@ -66,12 +72,40 @@ def create_state_change_handler(
     return _on_state_changed
 
 
+def create_voice_event_handlers(manager: ConnectionManager) -> list[tuple[str, Any]]:
+    """Handlers that mirror voice EventBus events onto WebSocket clients."""
+
+    async def _on_voice_status(payload: dict[str, Any]) -> None:
+        message = WebSocketMessage(type=VOICE_STATUS_CHANGED, payload=payload)
+        await manager.broadcast(message.to_dict())
+
+    async def _on_wake(payload: dict[str, Any]) -> None:
+        # Never include raw audio in wake events
+        safe = {
+            "phrase": payload.get("phrase"),
+            "confidence": payload.get("confidence"),
+        }
+        message = WebSocketMessage(type=VOICE_WAKE_DETECTED, payload=safe)
+        await manager.broadcast(message.to_dict())
+
+    async def _on_voice_error(payload: dict[str, Any]) -> None:
+        message = WebSocketMessage(type=VOICE_ERROR, payload=payload)
+        await manager.broadcast(message.to_dict())
+
+    return [
+        (VOICE_STATUS_CHANGED, _on_voice_status),
+        (VOICE_WAKE_DETECTED, _on_wake),
+        (VOICE_ERROR, _on_voice_error),
+    ]
+
+
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
-    """Accept a dashboard client and stream connection + state events."""
+    """Accept a dashboard client and stream connection, state, and voice events."""
     app = websocket.app
     manager: ConnectionManager = app.state.connection_manager
     state_manager: StateManager = app.state.state_manager
+    voice_service: VoiceService = app.state.voice_service
 
     await manager.connect(websocket)
 
@@ -94,10 +128,14 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     )
     await manager.send_json(websocket, state_message.to_dict())
 
-    # Keep the connection open; state broadcasts are delivered via EventBus.
+    voice_message = WebSocketMessage(
+        type=VOICE_STATUS_CHANGED,
+        payload=voice_status_to_ws_payload(voice_service.get_status()),
+    )
+    await manager.send_json(websocket, voice_message.to_dict())
+
     try:
         while True:
-            # Phase 1 does not process client commands; drain inbound frames.
             await websocket.receive_text()
     except WebSocketDisconnect:
         logger.info("WebSocket client closed connection")
@@ -110,8 +148,15 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 async def register_websocket_broadcasts(
     event_bus: EventBus,
     manager: ConnectionManager,
-) -> Any:
-    """Subscribe the connection manager to state-change events."""
-    handler = create_state_change_handler(manager)
-    await event_bus.subscribe(STATE_CHANGED, handler)
-    return handler
+) -> list[Any]:
+    """Subscribe the connection manager to state and voice events."""
+    handlers: list[Any] = []
+    state_handler = create_state_change_handler(manager)
+    await event_bus.subscribe(STATE_CHANGED, state_handler)
+    handlers.append(state_handler)
+
+    for event_type, handler in create_voice_event_handlers(manager):
+        await event_bus.subscribe(event_type, handler)
+        handlers.append(handler)
+
+    return handlers

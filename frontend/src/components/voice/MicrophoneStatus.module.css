@@ -1,0 +1,40 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.key {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+}
+
+.value {
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  color: var(--cyan);
+}
+
+.value[data-tone='warn'] {
+  color: var(--warning);
+}
+
+.value[data-tone='ok'] {
+  color: var(--success);
+}
+
+.detail {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}

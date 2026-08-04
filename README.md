@@ -1,8 +1,8 @@
 # Jarvis Workspace
 
-Phase 1 foundation for a local Windows desktop assistant. This monorepo provides a FastAPI backend, a React + TypeScript dashboard, WebSocket state sync, and a clean architecture for later voice, workspace, and integration features.
+Local Windows desktop assistant. Phase 1 delivered the FastAPI + React foundation. **Phase 2** adds offline wake-phrase detection for **“Wake up, Jarvis.”** using Vosk and the Windows microphone.
 
-**Phase 1 does not include** wake-word detection, speech recognition, TTS, application launching, email, calendar, news, or local AI.
+**Phase 2 does not include** text-to-speech, British male voice, application launching, workspace initialization, Ollama, unrestricted voice commands, email, calendar, news, or advanced cinematic dashboard animations.
 
 ## Prerequisites
 
@@ -10,10 +10,12 @@ Phase 1 foundation for a local Windows desktop assistant. This monorepo provides
 - Python 3.11+
 - Node.js 18+ (20+ recommended)
 - PowerShell
+- A working microphone (for live wake testing)
+- A manually downloaded small English Vosk model (see below)
 
 ## Setup (PowerShell)
 
-Run these from the `jarvis-workspace` folder unless noted.
+Run these from the repository root unless noted.
 
 ### 1. Check Python and Node versions
 
@@ -48,14 +50,38 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 pip install -r requirements-dev.txt
 ```
 
-### 5. Install frontend dependencies
+Phase 2 adds `vosk`, `sounddevice`, and `numpy`. PortAudio is bundled with the `sounddevice` wheels on Windows in typical installs.
+
+### 5. Install the Vosk model (required for listening)
+
+The backend does **not** auto-download models.
+
+1. Download a small English model from https://alphacephei.com/vosk/models  
+   (recommended: `vosk-model-small-en-us-0.15`)
+2. Extract to:
+
+```text
+backend/models/vosk-model-small-en-us/
+```
+
+3. Confirm markers exist:
+
+```powershell
+Test-Path .\models\vosk-model-small-en-us\am
+Test-Path .\models\vosk-model-small-en-us\conf
+Test-Path .\models\vosk-model-small-en-us\graph
+```
+
+Full instructions: [backend/models/README.md](backend/models/README.md).
+
+### 6. Install frontend dependencies
 
 ```powershell
 cd ..\frontend
 npm install
 ```
 
-### 6. Create local `.env` files from examples
+### 7. Create local `.env` files from examples
 
 ```powershell
 cd ..\backend
@@ -65,96 +91,151 @@ cd ..\frontend
 Copy-Item .env.example .env
 ```
 
-### 7. Start backend only
+Important Phase 2 keys in `backend/.env`:
 
-```powershell
-cd ..\scripts
-.\start-backend.ps1
+```env
+VOICE_ENABLED=true
+VOICE_START_AUTOMATICALLY=true
+WAKE_PHRASE=Wake up Jarvis
+VOSK_MODEL_PATH=models/vosk-model-small-en-us
+VOICE_DEVICE_ID=
+WAKE_CONFIDENCE_THRESHOLD=0.65
+WAKE_COOLDOWN_SECONDS=4
+ENVIRONMENT=development
 ```
 
-Or manually:
-
-```powershell
-cd ..\backend
-.\.venv\Scripts\Activate.ps1
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8765 --reload
-```
-
-### 8. Start frontend only
-
-```powershell
-cd ..\scripts
-.\start-frontend.ps1
-```
-
-Or manually:
-
-```powershell
-cd ..\frontend
-npm run dev
-```
-
-### 9. Start both using the development script
+### 8. Start both using the development script
 
 ```powershell
 cd scripts
 .\start-development.ps1
 ```
 
-### 10. Run backend tests
+Or start separately with `.\start-backend.ps1` and `.\start-frontend.ps1`.
+
+### 9. Open the application
+
+- Dashboard: http://localhost:5173
+- Health API: http://127.0.0.1:8765/api/health
+- Voice status: http://127.0.0.1:8765/api/voice/status
+- WebSocket: ws://127.0.0.1:8765/ws
+
+## Phase 2 — wake phrase
+
+### List microphones
+
+```powershell
+cd scripts
+.\test-wake-listener.ps1 -ListDevices
+```
+
+Or:
+
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+python tools\test_wake_phrase.py --list-devices
+```
+
+### Select a microphone
+
+- Dashboard **Settings → Wake phrase** dropdown, or
+- Set `VOICE_DEVICE_ID` in `backend/.env`, or
+- `PUT /api/voice/device` with `{ "device_id": 1 }`
+
+Device IDs can change after Windows restarts; prefer re-listing devices.
+
+### Start / stop the listener
+
+- Home **Wake Listener** panel buttons, or Settings Start/Stop
+- `POST /api/voice/start` and `POST /api/voice/stop`
+
+### Test “Wake up, Jarvis.”
+
+1. Ensure model + microphone permissions are OK
+2. Start the app or run `.\scripts\test-wake-listener.ps1`
+3. Say clearly: **Wake up, Jarvis.**
+4. Expect:
+   - Console / activity: wake detected
+   - Dashboard banner: **VOICE ACTIVATION CONFIRMED**
+   - Assistant state: `LISTENING` → `PROCESSING` → `LISTENING`
+5. The assistant must **not** speak or open applications in Phase 2
+
+Accepted variants include punctuation/case differences and `wakeup jarvis` if Vosk merges the tokens.
+
+### Test unrelated phrases
+
+Say “Jarvis”, “Hello Jarvis”, “Wake up”, etc. — the listener must **not** activate.
+
+### Test cooldown
+
+Say the wake phrase twice quickly. The second attempt within `WAKE_COOLDOWN_SECONDS` (default 4) is ignored; wait and try again.
+
+### Development simulation (no mic)
+
+With `ENVIRONMENT=development`:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8765/api/voice/test-activation
+```
+
+## Windows microphone troubleshooting
+
+### Permissions (Windows 10 / 11)
+
+1. **Settings → Privacy & security → Microphone**
+2. Enable microphone access for the device
+3. Allow desktop apps to access the microphone
+4. Restart the backend after changing permissions
+
+### Exclusive access
+
+Close Zoom, Teams, Discord, or other apps that may lock the mic. Then `POST /api/voice/start` or use Retry in Settings.
+
+### Invalid sample rates
+
+Jarvis requests 16 kHz mono PCM. If the device rejects 16 kHz, it opens at the native rate and resamples. Persistent failures appear as voice `ERROR` with a clear message — the rest of the API still runs.
+
+### Missing model
+
+If `VOSK_MODEL_PATH` is missing/invalid:
+
+- FastAPI still starts
+- Health and dashboard still work
+- Voice status is `MODEL_MISSING`
+- Install the model per `backend/models/README.md` and restart or Retry
+
+### Offline confirmation
+
+All recognition runs locally through Vosk. No cloud speech API and no API key are used for wake detection.
+
+## Tests and build
 
 ```powershell
 cd backend
 .\.venv\Scripts\Activate.ps1
 pytest -q
-```
 
-### 11. Run the frontend production build
-
-```powershell
-cd frontend
+cd ..\frontend
 npm run typecheck
 npm run build
 ```
 
-### 12. Open the application in the browser
-
-- Dashboard: http://localhost:5173
-- Health API: http://127.0.0.1:8765/api/health
-- State API: http://127.0.0.1:8765/api/state
-- WebSocket: ws://127.0.0.1:8765/ws
-
-### 13. Stopping the services
-
-- In each PowerShell window running Uvicorn or Vite, press `Ctrl+C`
-- Close the extra windows opened by `start-development.ps1` when finished
-
 ## Project layout
 
-- `backend/` — FastAPI app, StateManager, WebSocket, health API
-- `frontend/` — React dashboard shell
-- `scripts/` — PowerShell helpers
+- `backend/` — FastAPI app, StateManager, WebSocket, voice service, health API
+- `backend/models/` — Vosk model install location (binaries not committed)
+- `backend/tools/test_wake_phrase.py` — manual wake-listener utility
+- `frontend/` — React dashboard
+- `scripts/` — PowerShell helpers including `test-wake-listener.ps1`
 - `docs/` — Architecture, development, and phase roadmap
-
-## Phase 1 verification tip
-
-Force a state change and watch the dashboard update:
-
-```powershell
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8765/api/state/LISTENING
-```
-
-Then return to idle:
-
-```powershell
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8765/api/state/IDLE
-```
 
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Development](docs/DEVELOPMENT.md)
 - [Phases](docs/PHASES.md)
+- [Vosk model setup](backend/models/README.md)
 
 ## License
 

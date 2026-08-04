@@ -17,6 +17,8 @@ export interface UseJarvisSocketResult {
   connectionStatus: ConnectionStatus;
   assistantState: AssistantState | null;
   activity: ActivityEntry[];
+  pushActivity: (message: string, timestamp?: string) => void;
+  registerMessageHandler: (handler: ((message: WebSocketMessage) => void) | null) => void;
 }
 
 export function useJarvisSocket(): UseJarvisSocketResult {
@@ -25,11 +27,25 @@ export function useJarvisSocket(): UseJarvisSocketResult {
   const [assistantState, setAssistantState] = useState<AssistantState | null>(null);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
   const socketRef = useRef<JarvisSocket | null>(null);
+  const externalHandlerRef = useRef<((message: WebSocketMessage) => void) | null>(null);
+
+  const pushActivity = (message: string, timestamp?: string) => {
+    setActivity((prev) => {
+      const next = [createActivity(message, timestamp), ...prev];
+      return next.slice(0, environment.maxActivityEntries);
+    });
+  };
+
+  const registerMessageHandler = (
+    handler: ((message: WebSocketMessage) => void) | null,
+  ) => {
+    externalHandlerRef.current = handler;
+  };
 
   useEffect(() => {
     let active = true;
 
-    const pushActivity = (message: string, timestamp?: string) => {
+    const push = (message: string, timestamp?: string) => {
       if (!active) return;
       setActivity((prev) => {
         const next = [createActivity(message, timestamp), ...prev];
@@ -43,20 +59,21 @@ export function useJarvisSocket(): UseJarvisSocketResult {
           typeof message.payload.message === 'string'
             ? message.payload.message
             : 'Connected to Jarvis backend';
-        pushActivity(text, message.timestamp);
-        return;
-      }
-
-      if (message.type === 'state.changed') {
+        push(text, message.timestamp);
+      } else if (message.type === 'state.changed') {
         const payload = message.payload as unknown as StateChangedPayload;
         setAssistantState(payload.state as AssistantState);
-        pushActivity(
+        push(
           `State → ${payload.state}${
             payload.previous_state ? ` (from ${payload.previous_state})` : ''
           }`,
           message.timestamp,
         );
+      } else if (message.type === 'voice.wake_detected') {
+        push('Wake phrase detected', message.timestamp);
       }
+
+      externalHandlerRef.current?.(message);
     };
 
     const handleStatus = (status: 'open' | 'closed' | 'error') => {
@@ -75,7 +92,7 @@ export function useJarvisSocket(): UseJarvisSocketResult {
         if (prev === 'CONNECTING') return 'RECONNECTING';
         return prev === 'CONNECTED' ? 'RECONNECTING' : 'DISCONNECTED';
       });
-      pushActivity('WebSocket disconnected — attempting reconnect');
+      push('WebSocket disconnected — attempting reconnect');
     };
 
     setConnectionStatus('CONNECTING');
@@ -94,5 +111,11 @@ export function useJarvisSocket(): UseJarvisSocketResult {
     };
   }, []);
 
-  return { connectionStatus, assistantState, activity };
+  return {
+    connectionStatus,
+    assistantState,
+    activity,
+    pushActivity,
+    registerMessageHandler,
+  };
 }

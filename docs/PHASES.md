@@ -1,6 +1,6 @@
 # Phases
 
-## Phase 1 (current)
+## Phase 1 (complete)
 
 - Project foundation and monorepo layout
 - FastAPI backend with health + state APIs
@@ -11,15 +11,23 @@
 - PowerShell development scripts and documentation
 - Backend pytest coverage for health, state, and WebSocket basics
 
+## Phase 2 (current) — Offline wake-phrase detection
+
+- Offline wake-phrase recognition via Vosk (“Wake up, Jarvis.”)
+- Microphone discovery and session selection (`sounddevice`)
+- Voice-service lifecycle (start / stop / device change / clean shutdown)
+- WebSocket voice events and dashboard activation feedback
+- Local-only processing — no cloud speech APIs or API keys
+
 ## Future phases
 
-### Wake-phrase engine
-
-Detect “Wake up, Jarvis.” while the assistant runs quietly in the background.
-
-### British male voice
+### British male text-to-speech
 
 Speak welcome and status lines with a deep British male TTS profile.
+
+### Echo and self-voice suppression
+
+Prevent the assistant from activating on its own spoken output while TTS is active.
 
 ### Windows application control
 
@@ -27,13 +35,13 @@ Open and focus VS Code, Chrome, Gmail, Microsoft Teams, WhatsApp, Spotify, and r
 
 ### Advanced dashboard
 
-Richer visuals and motion beyond the Phase 1 foundation shell.
+Richer visuals and motion beyond the foundation shell (not the Phase 2 activation banner).
 
-### System monitoring
+### System monitoring graphs
 
-Expand beyond CPU/memory to GPU, disk, network, battery, and process lists with real data.
+Expand beyond CPU/memory to GPU, disk, network, battery, and process lists with real data and charts.
 
-### Application grid
+### Application command centre
 
 Clickable live grid of open / controlled applications.
 

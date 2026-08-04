@@ -14,6 +14,16 @@ export interface StateChangedPayload {
   changed_at: string;
 }
 
+export interface VoiceStatusChangedPayload {
+  status: string;
+  microphone_name?: string | null;
+}
+
+export interface VoiceWakeDetectedPayload {
+  phrase: string;
+  confidence: number;
+}
+
 export interface ActivityEntry {
   id: string;
   timestamp: string;
