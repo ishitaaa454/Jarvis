@@ -12,16 +12,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api import health, voice, websocket
+from app.api import health, tts, voice, websocket
 from app.api.websocket import ConnectionManager, register_websocket_broadcasts
 from app.core.config import get_settings
 from app.core.events import EventBus
 from app.core.logging_config import setup_logging
 from app.core.state_manager import StateManager
 from app.models.assistant_state import AssistantState
+from app.services.assistant import ActivationCoordinator
 from app.services.placeholders.integration_service import IntegrationService
 from app.services.placeholders.workspace_service import WorkspaceService
 from app.services.system_service import SystemService
+from app.services.tts import TtsService
 from app.services.voice import VoiceService
 
 logger = logging.getLogger(__name__)
@@ -50,9 +52,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     state_manager: StateManager = app.state.state_manager
     voice_service: VoiceService = app.state.voice_service
-    voice_service.bind(
+    tts_service: TtsService = app.state.tts_service
+    coordinator: ActivationCoordinator = app.state.activation_coordinator
+
+    voice_service.bind(state_manager=state_manager, event_bus=app.state.event_bus)
+    tts_service.bind(event_bus=app.state.event_bus)
+    coordinator.bind(
         state_manager=state_manager,
         event_bus=app.state.event_bus,
+        voice_service=voice_service,
+        tts_service=tts_service,
     )
 
     await state_manager.set_state(AssistantState.STARTING)
@@ -60,13 +69,33 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info("Backend ready (state=IDLE)")
 
     try:
+        await tts_service.on_startup()
+    except Exception:
+        logger.exception("TTS service startup failed — continuing without speech")
+
+    try:
         await voice_service.on_startup()
     except Exception:
         logger.exception("Voice service startup failed — continuing without listener")
 
+    try:
+        await coordinator.start()
+    except Exception:
+        logger.exception("ActivationCoordinator failed to start")
+
     yield
 
     logger.info("Backend shutdown requested")
+    try:
+        await coordinator.stop()
+    except Exception:
+        logger.exception("ActivationCoordinator shutdown failed")
+
+    try:
+        await tts_service.shutdown()
+    except Exception:
+        logger.exception("TTS service shutdown failed")
+
     try:
         await voice_service.shutdown()
     except Exception:
@@ -93,12 +122,16 @@ def create_app() -> FastAPI:
     state_manager = StateManager(event_bus)
     connection_manager = ConnectionManager()
     voice_service = VoiceService(settings=settings)
+    tts_service = TtsService(settings=settings, event_bus=event_bus)
+    coordinator = ActivationCoordinator(settings=settings)
 
     app.state.event_bus = event_bus
     app.state.state_manager = state_manager
     app.state.connection_manager = connection_manager
     app.state.system_service = SystemService()
     app.state.voice_service = voice_service
+    app.state.tts_service = tts_service
+    app.state.activation_coordinator = coordinator
     app.state.workspace_service = WorkspaceService()
     app.state.integration_service = IntegrationService()
     app.state.state_broadcast_handler = None
@@ -113,6 +146,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(voice.router)
+    app.include_router(tts.router)
     app.include_router(websocket.router)
 
     @app.exception_handler(StarletteHTTPException)

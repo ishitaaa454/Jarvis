@@ -71,6 +71,17 @@ export function useJarvisSocket(): UseJarvisSocketResult {
         );
       } else if (message.type === 'voice.wake_detected') {
         push('Wake phrase detected', message.timestamp);
+      } else if (message.type === 'assistant.activation_started') {
+        push('Microphone paused', message.timestamp);
+        push('Welcome sequence started', message.timestamp);
+      } else if (message.type === 'tts.utterance_started') {
+        const index = Number(message.payload.index ?? 0);
+        const total = Number(message.payload.total ?? 3);
+        push(`Speaking welcome message ${index} of ${total}`, message.timestamp);
+      } else if (message.type === 'tts.sequence_finished') {
+        push('Welcome sequence complete', message.timestamp);
+      } else if (message.type === 'assistant.activation_finished') {
+        push('Wake listener resumed', message.timestamp);
       }
 
       externalHandlerRef.current?.(message);

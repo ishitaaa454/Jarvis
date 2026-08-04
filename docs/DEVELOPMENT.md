@@ -6,7 +6,7 @@
 - TypeScript: strict mode, small components, CSS modules for scoped styling
 - Prefer explicit placeholder messaging over fake “working” behavior
 - Keep network traffic local (`127.0.0.1` / `localhost`)
-- Do not commit `.env` files, secrets, or Vosk model binaries
+- Do not commit `.env` files, secrets, Vosk model binaries, or Piper `.onnx` voices
 
 ## Adding a new backend service
 
@@ -46,7 +46,17 @@
 - Only `VoiceService` opens the input stream
 - Never open a second capture stream for the same session
 - Device changes must stop the current stream before opening another
-- Future TTS (Phase 3) must coordinate with `VoiceService` rather than opening competing capture
+- TTS coordinates via `pause_listening` / `resume_listening` (Phase 3)
+- `ActivationCoordinator` owns the full wake → speech → resume state machine
+
+## Piper / TTS rules
+
+- Keep Piper behind `PiperEngine` (subprocess list args, never `shell=True`)
+- Do not auto-download voices at backend startup
+- Delete temporary WAVs when `TTS_DELETE_TEMP_AUDIO=true`
+- Reject overlapping welcome sequences
+- Always attempt to resume the microphone after speech, cancel, or error
+- Test TTS without hardware using fake engine/player injection
 
 ## Logging and privacy rules
 
@@ -97,6 +107,14 @@ Manual wake listener (requires model + microphone):
 cd scripts
 .\test-wake-listener.ps1 -ListDevices
 .\test-wake-listener.ps1
+```
+
+Manual TTS (requires Piper + voice files + speakers):
+
+```powershell
+cd scripts
+.\test-tts.ps1 -ListDevices
+.\test-tts.ps1
 ```
 
 ## Logging expectations

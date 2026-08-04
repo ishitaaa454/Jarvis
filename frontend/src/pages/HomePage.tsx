@@ -4,12 +4,14 @@ import { ActivityLog } from '../components/jarvis/ActivityLog';
 import { JarvisCorePlaceholder } from '../components/jarvis/JarvisCorePlaceholder';
 import { MetricCard } from '../components/common/MetricCard';
 import { StatusBadge } from '../components/common/StatusBadge';
+import { WelcomeSequencePanel } from '../components/speech/WelcomeSequencePanel';
 import { VoiceActivationBanner } from '../components/voice/VoiceActivationBanner';
 import { WakeListenerPanel } from '../components/voice/WakeListenerPanel';
 import { environment } from '../config/environment';
 import { fetchHealth } from '../services/api';
 import type { ConnectionStatus } from '../types/assistant';
 import type { ActivityEntry } from '../types/messages';
+import type { TtsStatus, UtteranceProgress } from '../types/speech';
 import type { VoiceStatus } from '../types/voice';
 import styles from './HomePage.module.css';
 
@@ -24,6 +26,17 @@ interface HomePageProps {
   activationVisible: boolean;
   onStartListener: () => void;
   onStopListener: () => void;
+  ttsStatus: TtsStatus | null;
+  ttsLoading: boolean;
+  ttsError: string | null;
+  ttsPending: boolean;
+  currentUtterance: UtteranceProgress | null;
+  initializingVisible: boolean;
+  sequenceCompleteVisible: boolean;
+  speaking: boolean;
+  onTestWelcome: () => void;
+  onCancelSpeech: () => void;
+  onRetryTts: () => void;
 }
 
 export function HomePage({
@@ -37,6 +50,17 @@ export function HomePage({
   activationVisible,
   onStartListener,
   onStopListener,
+  ttsStatus,
+  ttsLoading,
+  ttsError,
+  ttsPending,
+  currentUtterance,
+  initializingVisible,
+  sequenceCompleteVisible,
+  speaking,
+  onTestWelcome,
+  onCancelSpeech,
+  onRetryTts,
 }: HomePageProps) {
   const [now, setNow] = useState(() => new Date());
   const [cpu, setCpu] = useState<number | null>(null);
@@ -90,7 +114,10 @@ export function HomePage({
       <VoiceActivationBanner visible={activationVisible} />
 
       <div className={styles.coreWrap}>
-        <JarvisCorePlaceholder connected={connected} activated={activationVisible} />
+        <JarvisCorePlaceholder
+          connected={connected}
+          activated={activationVisible || speaking}
+        />
       </div>
 
       <section className={styles.statusRow}>
@@ -110,6 +137,20 @@ export function HomePage({
         pending={voicePending}
         onStart={onStartListener}
         onStop={onStopListener}
+      />
+
+      <WelcomeSequencePanel
+        ttsStatus={ttsStatus}
+        loading={ttsLoading}
+        error={ttsError}
+        pending={ttsPending}
+        currentUtterance={currentUtterance}
+        initializingVisible={initializingVisible}
+        sequenceCompleteVisible={sequenceCompleteVisible}
+        speaking={speaking}
+        onTestWelcome={onTestWelcome}
+        onCancel={onCancelSpeech}
+        onRetry={onRetryTts}
       />
 
       <section className={styles.metrics}>

@@ -214,7 +214,9 @@ async def test_missing_microphone_does_not_crash(settings: Settings, tmp_path: P
 
 @pytest.mark.asyncio
 async def test_wake_updates_assistant_state(voice_bundle) -> None:
+    """Without handoff, VoiceService still does PROCESSING then LISTENING after delay."""
     service, state, bus, _streams = voice_bundle
+    service.set_activation_handoff(False)
     await service.start()
     events: list[dict] = []
 
@@ -231,6 +233,29 @@ async def test_wake_updates_assistant_state(voice_bundle) -> None:
     # Wait for return-to-listening
     await asyncio.sleep(0.9)
     assert state.current_state == AssistantState.LISTENING
+    await service.stop()
+
+
+@pytest.mark.asyncio
+async def test_wake_with_handoff_does_not_auto_return(voice_bundle) -> None:
+    """With handoff, ActivationCoordinator owns transitions — no auto LISTENING."""
+    service, state, bus, _streams = voice_bundle
+    service.set_activation_handoff(True)
+    await service.start()
+    events: list[dict] = []
+
+    async def capture(payload: dict) -> None:
+        events.append(payload)
+
+    await bus.subscribe(VOICE_WAKE_DETECTED, capture)
+    await service.simulate_wake(confidence=0.95)
+    assert events
+    assert "phrase" in events[0]
+    # VoiceService must not drive PROCESSING → LISTENING when handoff is on
+    assert state.current_state == AssistantState.LISTENING
+    await asyncio.sleep(0.9)
+    assert state.current_state == AssistantState.LISTENING
+    assert service.get_status().status == VoiceServiceStatus.ACTIVATION_DETECTED
     await service.stop()
 
 

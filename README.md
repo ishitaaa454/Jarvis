@@ -1,8 +1,8 @@
 # Jarvis Workspace
 
-Local Windows desktop assistant. Phase 1 delivered the FastAPI + React foundation. **Phase 2** adds offline wake-phrase detection for **“Wake up, Jarvis.”** using Vosk and the Windows microphone.
+Local Windows desktop assistant. Phase 1 delivered the FastAPI + React foundation. Phase 2 added offline wake-phrase detection. **Phase 3** adds offline British male text-to-speech (Piper) and the fixed welcome sequence after “Wake up, Jarvis.”
 
-**Phase 2 does not include** text-to-speech, British male voice, application launching, workspace initialization, Ollama, unrestricted voice commands, email, calendar, news, or advanced cinematic dashboard animations.
+**Phase 3 does not include** application launching, email, calendar, news, Ollama, unrestricted voice commands, Windows startup packaging, or advanced cinematic dashboard animations.
 
 ## Prerequisites
 
@@ -11,7 +11,9 @@ Local Windows desktop assistant. Phase 1 delivered the FastAPI + React foundatio
 - Node.js 18+ (20+ recommended)
 - PowerShell
 - A working microphone (for live wake testing)
+- Speakers or headphones (for welcome speech)
 - A manually downloaded small English Vosk model (see below)
+- Piper for Windows + `en_GB-alan-medium` voice files (see Phase 3)
 
 ## Setup (PowerShell)
 
@@ -152,16 +154,17 @@ Device IDs can change after Windows restarts; prefer re-listing devices.
 
 ### Test “Wake up, Jarvis.”
 
-1. Ensure model + microphone permissions are OK
-2. Start the app or run `.\scripts\test-wake-listener.ps1`
-3. Say clearly: **Wake up, Jarvis.**
-4. Expect:
-   - Console / activity: wake detected
+1. Ensure Vosk model + microphone permissions are OK
+2. Optionally install Piper + `en_GB-alan-medium` (Phase 3) for spoken welcome
+3. Start the app or run `.\scripts\test-wake-listener.ps1`
+4. Say clearly: **Wake up, Jarvis.**
+5. Expect:
    - Dashboard banner: **VOICE ACTIVATION CONFIRMED**
-   - Assistant state: `LISTENING` → `PROCESSING` → `LISTENING`
-5. The assistant must **not** speak or open applications in Phase 2
+   - Assistant state: `LISTENING` → `PROCESSING` → `SPEAKING` → `LISTENING` (with Piper)
+   - Three welcome sentences spoken in order (with Piper)
+6. Applications are **not** opened in Phase 3
 
-Accepted variants include punctuation/case differences and `wakeup jarvis` if Vosk merges the tokens.
+Accepted wake variants include punctuation/case differences and `wakeup jarvis` if Vosk merges the tokens.
 
 ### Test unrelated phrases
 
@@ -177,7 +180,64 @@ With `ENVIRONMENT=development`:
 
 ```powershell
 Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8765/api/voice/test-activation
+# Or full welcome via coordinator:
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8765/api/tts/test-welcome
 ```
+
+## Phase 3 — British male TTS (Piper)
+
+### Install Piper on Windows
+
+See [backend/voices/README.md](backend/voices/README.md).
+
+1. Download `piper_windows_amd64.zip` from https://github.com/rhasspy/piper/releases
+2. Extract (keep `piper.exe` + DLLs + `espeak-ng-data` together)
+3. Set `PIPER_EXECUTABLE_PATH` in `backend/.env`
+
+### Install `en_GB-alan-medium`
+
+Place both files under:
+
+```text
+backend/voices/en_GB-alan-medium/en_GB-alan-medium.onnx
+backend/voices/en_GB-alan-medium/en_GB-alan-medium.onnx.json
+```
+
+### List / select output devices
+
+```powershell
+.\scripts\test-tts.ps1 -ListDevices
+```
+
+Or Settings → Speech output. Device IDs can change after reboot.
+
+### Test welcome sequence
+
+```powershell
+.\scripts\test-tts.ps1
+.\scripts\test-tts.ps1 -DeviceId 4
+.\scripts\test-tts.ps1 -Line 1
+```
+
+Dashboard: Home **Speech Engine** → Test welcome / Cancel.
+
+### Expected spoken lines (exact)
+
+1. Welcome back, Ishita. Initializing your workspace.
+2. All systems are online.
+3. Opening your workspace now.
+
+### TTS troubleshooting
+
+| Issue | What to do |
+| --- | --- |
+| Piper missing | Install Windows zip; set `PIPER_EXECUTABLE_PATH` |
+| Model missing | Place `.onnx` + `.onnx.json` under `backend/voices/...` |
+| Silent playback | Select correct output device; check Windows volume / exclusive mode |
+| Mic not resuming | Use Cancel or Retry; check logs for resume errors |
+| Wrong speakers | Change device in Settings or `TTS_OUTPUT_DEVICE_ID` |
+
+Synthesis is local and offline — no API key and no paid cloud TTS.
 
 ## Windows microphone troubleshooting
 
@@ -223,11 +283,12 @@ npm run build
 
 ## Project layout
 
-- `backend/` — FastAPI app, StateManager, WebSocket, voice service, health API
+- `backend/` — FastAPI app, StateManager, WebSocket, voice + TTS services
 - `backend/models/` — Vosk model install location (binaries not committed)
-- `backend/tools/test_wake_phrase.py` — manual wake-listener utility
+- `backend/voices/` — Piper voice install location (binaries not committed)
+- `backend/tools/` — `test_wake_phrase.py`, `test_tts.py`
 - `frontend/` — React dashboard
-- `scripts/` — PowerShell helpers including `test-wake-listener.ps1`
+- `scripts/` — PowerShell helpers including `test-wake-listener.ps1`, `test-tts.ps1`
 - `docs/` — Architecture, development, and phase roadmap
 
 ## Documentation
@@ -236,6 +297,7 @@ npm run build
 - [Development](docs/DEVELOPMENT.md)
 - [Phases](docs/PHASES.md)
 - [Vosk model setup](backend/models/README.md)
+- [Piper voice setup](backend/voices/README.md)
 
 ## License
 

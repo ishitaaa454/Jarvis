@@ -1,7 +1,7 @@
 """Shared pytest fixtures for Jarvis backend tests.
 
-Hardware, Vosk models, and automatic listener startup are disabled by default
-so the suite runs offline without a microphone.
+Hardware, Vosk models, Piper, speakers, and automatic listener/TTS startup
+are disabled by default so the suite runs offline without a microphone.
 """
 
 from __future__ import annotations
@@ -15,6 +15,8 @@ os.environ.setdefault("ENVIRONMENT", "development")
 os.environ.setdefault("VOICE_ENABLED", "true")
 os.environ.setdefault("VOICE_START_AUTOMATICALLY", "false")
 os.environ.setdefault("VOSK_MODEL_PATH", "models/vosk-model-small-en-us")
+os.environ.setdefault("TTS_ENABLED", "true")
+os.environ.setdefault("TTS_START_AUTOMATICALLY", "false")
 
 
 @pytest.fixture(autouse=True)

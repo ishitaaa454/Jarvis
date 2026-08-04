@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -12,6 +14,12 @@ from app.models.assistant_state import AssistantState
 @pytest.fixture
 def client() -> TestClient:
     application = create_app()
+    application.state.voice_service.on_startup = AsyncMock(return_value=None)
+    application.state.voice_service.shutdown = AsyncMock(return_value=None)
+    application.state.tts_service.on_startup = AsyncMock(return_value=None)
+    application.state.tts_service.shutdown = AsyncMock(return_value=None)
+    application.state.activation_coordinator.start = AsyncMock(return_value=None)
+    application.state.activation_coordinator.stop = AsyncMock(return_value=None)
     with TestClient(application) as test_client:
         yield test_client
 
@@ -69,3 +77,7 @@ def test_websocket_receives_connection_event(client: TestClient) -> None:
         voice_message = websocket.receive_json()
         assert voice_message["type"] == "voice.status_changed"
         assert "status" in voice_message["payload"]
+
+        tts_message = websocket.receive_json()
+        assert tts_message["type"] == "tts.status_changed"
+        assert "status" in tts_message["payload"]

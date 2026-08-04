@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 
 import { MetricCard } from '../components/common/MetricCard';
+import { describeTtsStatus } from '../hooks/useSpeechStatus';
 import { describeVoiceStatus } from '../hooks/useVoiceStatus';
 import { environment } from '../config/environment';
 import { fetchHealth } from '../services/api';
+import type { TtsStatus } from '../types/speech';
 import type { VoiceStatus } from '../types/voice';
 import styles from './SystemPage.module.css';
 
@@ -11,9 +13,10 @@ const LATER = 'Available in a later phase';
 
 interface SystemPageProps {
   voiceStatus: VoiceStatus | null;
+  ttsStatus: TtsStatus | null;
 }
 
-export function SystemPage({ voiceStatus }: SystemPageProps) {
+export function SystemPage({ voiceStatus, ttsStatus }: SystemPageProps) {
   const [cpu, setCpu] = useState<number | null>(null);
   const [memory, setMemory] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,6 +63,27 @@ export function SystemPage({ voiceStatus }: SystemPageProps) {
       : voiceStatus?.model_loaded
         ? 'Loaded'
         : 'Not loaded';
+
+  const piperLabel = describeTtsStatus(ttsStatus?.status);
+  const britishModel =
+    ttsStatus?.status === 'MODEL_MISSING'
+      ? 'Missing'
+      : ttsStatus?.model_loaded
+        ? 'Loaded'
+        : 'Not loaded';
+  const outputLabel =
+    ttsStatus?.status === 'OUTPUT_UNAVAILABLE'
+      ? 'Unavailable'
+      : ttsStatus?.output_device?.name
+        ? 'Available'
+        : 'Unavailable';
+  const playbackLabel =
+    ttsStatus?.status === 'ERROR'
+      ? 'Error'
+      : ttsStatus?.is_speaking || ttsStatus?.status === 'SPEAKING'
+        ? 'Speaking'
+        : 'Idle';
+  const suppression = ttsStatus?.microphone_suppressed ? 'Active' : 'Inactive';
 
   return (
     <div className={styles.page}>
@@ -111,6 +135,26 @@ export function SystemPage({ voiceStatus }: SystemPageProps) {
             <tr>
               <td>Vosk model</td>
               <td>{modelLabel}</td>
+            </tr>
+            <tr>
+              <td>Piper engine</td>
+              <td>{piperLabel}</td>
+            </tr>
+            <tr>
+              <td>British voice model</td>
+              <td>{britishModel}</td>
+            </tr>
+            <tr>
+              <td>Audio output</td>
+              <td>{outputLabel}</td>
+            </tr>
+            <tr>
+              <td>Speech playback</td>
+              <td>{playbackLabel}</td>
+            </tr>
+            <tr>
+              <td>Microphone suppression</td>
+              <td>{suppression}</td>
             </tr>
             <tr>
               <td>Voice processing</td>

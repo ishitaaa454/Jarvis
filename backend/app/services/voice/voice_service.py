@@ -91,6 +91,10 @@ class VoiceService:
         self._return_listening_task: asyncio.Task[None] | None = None
         self._queue_overflows = 0
         self._accepting_actions = True
+        self._activation_handoff = False
+        self._paused_for_speech = False
+        self._was_listening_before_pause = False
+        self._callback_rate = self._settings.voice_sample_rate
 
     # ------------------------------------------------------------------
     # Public status / device helpers
@@ -112,11 +116,58 @@ class VoiceService:
     def set_event_loop(self, loop: asyncio.AbstractEventLoop) -> None:
         self._loop = loop
 
-    def speak(self, text: str) -> None:
-        """Reserved for Phase 3 British-male TTS."""
-        raise NotImplementedError(
-            f"Text-to-speech is not available in Phase 2 (text={text!r})."
+    def set_activation_handoff(self, enabled: bool) -> None:
+        """When True, ActivationCoordinator owns post-wake state transitions."""
+        self._activation_handoff = enabled
+        if enabled and self._return_listening_task and not self._return_listening_task.done():
+            self._return_listening_task.cancel()
+
+    def is_capture_active(self) -> bool:
+        return (
+            self._stream is not None
+            and not self._stop_event.is_set()
+            and not self._paused_for_speech
         )
+
+    def speak(self, text: str) -> None:
+        """Reserved — Phase 3 speech goes through TtsService / ActivationCoordinator."""
+        raise NotImplementedError(
+            f"Use TtsService for speech output (text={text!r})."
+        )
+
+    async def pause_listening(self) -> None:
+        """Stop microphone capture and clear queued audio (self-voice suppression)."""
+        async with self._lock:
+            self._was_listening_before_pause = self._status in {
+                VoiceServiceStatus.LISTENING,
+                VoiceServiceStatus.ACTIVATION_DETECTED,
+            } or self._stream is not None
+            self._paused_for_speech = True
+            logger.info("Pausing microphone capture for speech output")
+            await self._teardown_stream_and_worker()
+            self._clear_queue()
+            if self._status not in {
+                VoiceServiceStatus.DISABLED,
+                VoiceServiceStatus.MODEL_MISSING,
+                VoiceServiceStatus.ERROR,
+            }:
+                # Keep ACTIVATION_DETECTED visible briefly; otherwise STOPPED while muted
+                if self._status != VoiceServiceStatus.ACTIVATION_DETECTED:
+                    self._status = VoiceServiceStatus.STOPPED
+            await self._publish_status()
+
+    async def resume_listening(self) -> None:
+        """Clear stale audio and restart wake listening after speech."""
+        async with self._lock:
+            self._paused_for_speech = False
+            self._clear_queue()
+            should_restart = self._was_listening_before_pause and self._accepting_actions
+            self._was_listening_before_pause = False
+            if should_restart and self._settings.voice_enabled:
+                logger.info("Resuming microphone capture after speech")
+                await self._start_locked()
+            else:
+                await self._publish_status()
 
     def get_status(self) -> VoiceStatusResponse:
         mic = None
@@ -601,6 +652,10 @@ class VoiceService:
     # ------------------------------------------------------------------
 
     async def _handle_activation(self, phrase: str, confidence: float) -> None:
+        if self._paused_for_speech:
+            logger.info("Ignoring wake while microphone is paused for speech")
+            return
+
         logger.info(
             "Wake phrase detected phrase=%r confidence=%.3f",
             phrase,
@@ -609,7 +664,6 @@ class VoiceService:
         self._last_activation_at = utc_now()
         self._status = VoiceServiceStatus.ACTIVATION_DETECTED
         self._activation_generation += 1
-        generation = self._activation_generation
 
         if self._event_bus is not None:
             await self._event_bus.publish(
@@ -618,14 +672,19 @@ class VoiceService:
             )
         await self._publish_status()
 
+        # Phase 3: ActivationCoordinator owns PROCESSING → SPEAKING → LISTENING.
+        # Phase 2 fallback (no coordinator): brief PROCESSING then return to LISTENING.
+        if self._activation_handoff:
+            return
+
         if self._state_manager is not None:
             await self._state_manager.set_state(AssistantState.PROCESSING)
 
-        # Cancel any pending return-to-LISTENING from a prior activation
         if self._return_listening_task and not self._return_listening_task.done():
             self._return_listening_task.cancel()
 
         display_s = self._settings.voice_activation_display_ms / 1000.0
+        generation = self._activation_generation
         self._return_listening_task = asyncio.create_task(
             self._return_to_listening(generation, display_s)
         )

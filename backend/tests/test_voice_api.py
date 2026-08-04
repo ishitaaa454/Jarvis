@@ -75,9 +75,15 @@ def client(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> TestClient:
     voice.set_device = fake_set_device  # type: ignore[method-assign]
     voice.list_devices = fake_list  # type: ignore[method-assign]
 
-    # Avoid real model / mic work during lifespan on_startup
+    # Avoid real model / mic / Piper work during lifespan on_startup
     voice.on_startup = AsyncMock(return_value=None)  # type: ignore[method-assign]
     voice.shutdown = AsyncMock(return_value=None)  # type: ignore[method-assign]
+
+    tts = application.state.tts_service
+    tts.on_startup = AsyncMock(return_value=None)  # type: ignore[method-assign]
+    tts.shutdown = AsyncMock(return_value=None)  # type: ignore[method-assign]
+    application.state.activation_coordinator.start = AsyncMock(return_value=None)
+    application.state.activation_coordinator.stop = AsyncMock(return_value=None)
 
     with TestClient(application) as test_client:
         yield test_client
@@ -126,6 +132,8 @@ def test_test_activation_publishes_websocket_event(client: TestClient) -> None:
         assert websocket.receive_json()["type"] == "state.changed"
         voice_status = websocket.receive_json()
         assert voice_status["type"] == "voice.status_changed"
+        tts_status = websocket.receive_json()
+        assert tts_status["type"] == "tts.status_changed"
 
         response = client.post("/api/voice/test-activation")
         assert response.status_code == 200
@@ -151,6 +159,9 @@ def test_websocket_sends_voice_status_on_connect(client: TestClient) -> None:
         voice_msg = websocket.receive_json()
         assert voice_msg["type"] == "voice.status_changed"
         assert "status" in voice_msg["payload"]
+        tts_msg = websocket.receive_json()
+        assert tts_msg["type"] == "tts.status_changed"
+        assert "status" in tts_msg["payload"]
 
 
 def test_missing_model_app_still_starts(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -161,6 +172,13 @@ def test_missing_model_app_still_starts(monkeypatch: pytest.MonkeyPatch, tmp_pat
     get_settings.cache_clear()
 
     application = create_app()
+    application.state.voice_service.on_startup = AsyncMock(return_value=None)
+    application.state.voice_service.shutdown = AsyncMock(return_value=None)
+    application.state.tts_service.on_startup = AsyncMock(return_value=None)
+    application.state.tts_service.shutdown = AsyncMock(return_value=None)
+    application.state.activation_coordinator.start = AsyncMock(return_value=None)
+    application.state.activation_coordinator.stop = AsyncMock(return_value=None)
+
     with TestClient(application) as test_client:
         health = test_client.get("/api/health")
         assert health.status_code == 200
@@ -187,6 +205,10 @@ def test_test_activation_hidden_in_production(
     voice = application.state.voice_service
     voice.on_startup = AsyncMock(return_value=None)
     voice.shutdown = AsyncMock(return_value=None)
+    application.state.tts_service.on_startup = AsyncMock(return_value=None)
+    application.state.tts_service.shutdown = AsyncMock(return_value=None)
+    application.state.activation_coordinator.start = AsyncMock(return_value=None)
+    application.state.activation_coordinator.stop = AsyncMock(return_value=None)
 
     with TestClient(application) as test_client:
         response = test_client.post("/api/voice/test-activation")

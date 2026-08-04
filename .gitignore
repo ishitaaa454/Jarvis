@@ -27,6 +27,14 @@ backend/models/**
 !backend/models/README.md
 !backend/models/.gitkeep
 
+# Piper voice models and generated TTS audio (see backend/voices/README.md)
+backend/voices/**
+!backend/voices/README.md
+!backend/voices/.gitkeep
+backend/tmp/
+*.onnx
+*.wav
+
 # Node / frontend
 frontend/node_modules/
 frontend/dist/

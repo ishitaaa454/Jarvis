@@ -1,16 +1,17 @@
 # Architecture
 
-Jarvis Workspace is a local monorepo with a clear split between a Python backend (control plane) and a React frontend (presentation plane). Phase 1 established communication, state, and the dashboard shell. Phase 2 adds offline wake-phrase detection through a dedicated voice service.
+Jarvis Workspace is a local monorepo with a clear split between a Python backend (control plane) and a React frontend (presentation plane). Phase 1 established communication and the dashboard shell. Phase 2 added offline wake-phrase detection. Phase 3 adds offline Piper TTS and coordinates wake → welcome speech.
 
 ## Backend responsibilities
 
-- Expose HTTP APIs for health, assistant state, and voice control
+- Expose HTTP APIs for health, assistant state, voice control, and TTS
 - Own the assistant lifecycle via `StateManager`
-- Broadcast state and voice events over WebSocket
+- Broadcast state, voice, and TTS events over WebSocket
 - Collect basic host metrics (CPU / memory) with `psutil`
-- Provide structured logging to the terminal and `backend/logs/jarvis.log`
-- Own the Windows microphone stream for offline wake-phrase detection (`VoiceService`)
-- Host placeholder services for later phases (`WorkspaceService`, `IntegrationService`)
+- Own the Windows microphone stream (`VoiceService`)
+- Own speech synthesis/playback (`TtsService` + Piper)
+- Coordinate wake → speech → resume via `ActivationCoordinator`
+- Host placeholders for later phases (`WorkspaceService`, `IntegrationService`)
 
 The backend is intentionally free of UI concerns. It does not render dashboards or store presentation preferences.
 
@@ -89,20 +90,50 @@ Raw microphone audio and continuous transcripts are never sent over WebSocket.
 
 ### Thread-to-async event bridge
 
-The FastAPI event loop reference is captured during voice startup. Recognition never creates a new event loop per wake. The async handler:
+The FastAPI event loop reference is captured during voice startup. Recognition never creates a new event loop per wake. On activation:
 
 1. Publishes `voice.wake_detected`
-2. Sets assistant state to `PROCESSING`
-3. Schedules a short (~800–1200 ms) return to `LISTENING` without blocking the worker
-4. Uses an activation generation counter so overlapping activations do not race
+2. Hands control to `ActivationCoordinator` (Phase 3)
+3. Coordinator pauses the microphone, runs TTS, then resumes listening
+
+Phase 2’s short auto-return-to-`LISTENING` timer is disabled when the coordinator is bound (`set_activation_handoff(True)`), so it cannot overwrite `SPEAKING`.
 
 ### Why one service owns the microphone
 
-Only `VoiceService` opens the input stream. Device changes stop the existing stream before opening another. Phase 3 TTS will coordinate with this same owner so playback and capture do not fight for exclusive device access — TTS will pause or duck listening rather than opening a second capture path.
+Only `VoiceService` opens the input stream. During speech, `ActivationCoordinator` calls `pause_listening()` / `resume_listening()` so Jarvis cannot hear itself. Future application launching should wait until the welcome sequence finishes.
 
 ### Confidence calculation
 
 When Vosk returns per-word `conf` values, confidence is the arithmetic mean of those values. If the normalized text exactly matches the wake phrase but word confidences are absent, confidence defaults to `1.0`. Activation requires `confidence >= WAKE_CONFIDENCE_THRESHOLD`.
+
+## Phase 3 TTS architecture
+
+### Wake-to-speech flow
+
+1. Wake phrase confirmed → `voice.wake_detected`
+2. `ActivationCoordinator` starts (rejects duplicates)
+3. Assistant → `PROCESSING`
+4. Microphone paused + input queue cleared
+5. Pre-speech delay
+6. Assistant → `SPEAKING`
+7. `TtsService` speaks three fixed utterances with pauses
+8. Post-speech delay + clear stale audio
+9. Microphone resumed
+10. Assistant → `LISTENING`
+
+### Component roles
+
+| Component | Responsibility |
+| --- | --- |
+| `PiperEngine` | Validate Piper + voice files; synthesize WAV via subprocess (`shell=False`) |
+| `AudioPlayer` | Play one WAV at a time on the selected output device |
+| `SpeechQueue` | Ordered, bounded welcome utterances |
+| `TtsService` | TTS lifecycle, sequence events, cancel/retry |
+| `ActivationCoordinator` | Authoritative wake → speech → resume orchestration |
+
+### Microphone muting
+
+Self-voice suppression in Phase 3 is controlled muting (stop capture), not acoustic echo cancellation.
 
 ## Why separate services?
 
@@ -110,18 +141,19 @@ Voice, workspace control, and integrations have different failure modes, depende
 
 | Service | Focus | Why separate |
 | --- | --- | --- |
-| `VoiceService` | Wake phrase (Phase 2); STT/TTS later | Audio devices and model runtimes |
+| `VoiceService` | Wake phrase / mic ownership | Capture devices and Vosk |
+| `TtsService` | Piper synthesis + playback | Output devices and voice models |
 | `WorkspaceService` | Launch / focus apps | Windows process automation |
 | `IntegrationService` | Calendar, email, news, local AI | External credentials and network I/O |
 
-Keeping them isolated prevents the core API and StateManager from coupling to optional subsystems. Voice failures must not prevent health/state/dashboard APIs from working.
+Keeping them isolated prevents the core API and StateManager from coupling to optional subsystems. Voice/TTS failures must not prevent health/state/dashboard APIs from working.
 
 ## How later phases plug in
 
 Typical extension path:
 
-1. Extend `VoiceService` (for example `speak()` for British-male TTS) without bypassing microphone ownership
-2. Drive `StateManager` transitions (`SPEAKING`, `OPENING_APPLICATIONS`, etc.)
+1. Extend `ActivationCoordinator` after welcome speech (for example open workspace apps)
+2. Drive `StateManager` transitions (`OPENING_APPLICATIONS`, etc.)
 3. Publish additional WebSocket event types using `WebSocketMessage`
 4. Extend dashboard pages to consume the new events / APIs
 5. Keep health, state, and connection plumbing unchanged
