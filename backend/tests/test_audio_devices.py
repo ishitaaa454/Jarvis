@@ -88,6 +88,30 @@ def test_resolve_prefers_configured_id() -> None:
     assert device.name == "Mic B"
 
 
+def test_resolve_prefers_physical_mic_when_no_default() -> None:
+    sd = FakeSoundDevice(
+        [
+            {
+                "name": "Microsoft Sound Mapper - Input",
+                "hostapi": 0,
+                "max_input_channels": 2,
+                "default_samplerate": 44100,
+            },
+            {
+                "name": "Microphone Array (Intel)",
+                "hostapi": 0,
+                "max_input_channels": 2,
+                "default_samplerate": 48000,
+            },
+        ],
+        default_input=None,
+    )
+    manager = AudioDeviceManager(sounddevice_module=sd)
+    device = manager.resolve_device()
+    assert device is not None
+    assert "Microphone Array" in device.name
+
+
 def test_no_devices_returns_empty() -> None:
     sd = FakeSoundDevice([], default_input=None)
     manager = AudioDeviceManager(sounddevice_module=sd)

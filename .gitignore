@@ -50,3 +50,7 @@ htmlcov/
 *.egg-info/
 dist/
 build/
+
+# Accidental Vosk API source dumps (use pip package + model zip instead)
+vosk-api-master/
+vosk-api-*/

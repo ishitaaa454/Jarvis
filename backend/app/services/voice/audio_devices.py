@@ -140,7 +140,35 @@ class AudioDeviceManager:
         for device in devices:
             if device.is_default:
                 return device
-        return devices[0]
+        return self._prefer_physical_microphone(devices) or devices[0]
+
+    @staticmethod
+    def _prefer_physical_microphone(
+        devices: list[AudioDeviceInfo],
+    ) -> AudioDeviceInfo | None:
+        """Prefer a real mic over generic mappers when Windows reports no default."""
+        ranked: list[tuple[int, AudioDeviceInfo]] = []
+        for device in devices:
+            name = device.name.lower()
+            host = device.host_api.lower()
+            score = 0
+            if "mapper" in name or "primary sound capture" in name:
+                score -= 50
+            if "stereo mix" in name or "pc speaker" in name:
+                score -= 40
+            if "microphone" in name or "mic" in name:
+                score += 20
+            if "array" in name:
+                score += 10
+            if "wasapi" in host:
+                score += 15
+            elif "directsound" in host:
+                score += 5
+            ranked.append((score, device))
+        ranked.sort(key=lambda item: item[0], reverse=True)
+        if not ranked or ranked[0][0] <= 0:
+            return None
+        return ranked[0][1]
 
     @staticmethod
     def _default_input_index(sd: SoundDeviceModule) -> int | None:
