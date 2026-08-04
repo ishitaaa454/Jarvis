@@ -1,0 +1,58 @@
+.core {
+  position: relative;
+  width: min(220px, 55vw);
+  aspect-ratio: 1;
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+.ring,
+.ringInner {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(79, 210, 255, 0.35);
+}
+
+.ring {
+  border-style: dashed;
+}
+
+.ringInner {
+  inset: 14%;
+  border-color: rgba(79, 210, 255, 0.55);
+}
+
+.center {
+  width: 42%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-strong);
+  background: radial-gradient(circle at 30% 30%, rgba(79, 210, 255, 0.25), rgba(5, 12, 22, 0.9));
+  font-family: var(--font-display);
+  letter-spacing: 0.12em;
+  color: var(--cyan);
+  z-index: 1;
+}
+
+.connected .ring {
+  animation: core-rotate 18s linear infinite;
+}
+
+.connected .center {
+  animation: core-pulse 3.2s ease-in-out infinite;
+}
+
+.disconnected {
+  opacity: 0.45;
+  filter: grayscale(0.4);
+}
+
+.disconnected .ring,
+.disconnected .center {
+  animation: none;
+}

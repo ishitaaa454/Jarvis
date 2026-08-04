@@ -1,0 +1,33 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  font-family: var(--font-display);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.connecting,
+.reconnecting {
+  color: var(--warning);
+  animation: status-blink 1.4s ease-in-out infinite;
+}
+
+.connected {
+  color: var(--success);
+}
+
+.disconnected,
+.error {
+  color: var(--danger);
+}

@@ -1,0 +1,20 @@
+:root {
+  --bg-deep: #05080f;
+  --bg-panel: rgba(10, 18, 32, 0.72);
+  --bg-panel-strong: rgba(12, 22, 40, 0.9);
+  --border-subtle: rgba(90, 180, 220, 0.18);
+  --border-strong: rgba(80, 210, 255, 0.45);
+  --cyan: #4fd2ff;
+  --cyan-dim: #2a8fb8;
+  --cyan-glow: rgba(79, 210, 255, 0.35);
+  --text-primary: #e8f6ff;
+  --text-muted: #8aa4b8;
+  --danger: #ff6b7a;
+  --warning: #ffc857;
+  --success: #4dffb5;
+  --font-display: 'Orbitron', 'Segoe UI', sans-serif;
+  --font-body: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  --radius: 14px;
+  --shadow-glow: 0 0 24px rgba(79, 210, 255, 0.12);
+  --grid-line: rgba(79, 210, 255, 0.05);
+}

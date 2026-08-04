@@ -1,0 +1,23 @@
+.row {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.dot:hover {
+  transform: scale(1.15);
+}
+
+.active {
+  background: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan-glow);
+}
