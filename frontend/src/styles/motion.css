@@ -1,0 +1,9 @@
+.anim-fade-in {
+  animation: fade-in var(--motion-normal) var(--ease-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-fade-in {
+    animation: none;
+  }
+}

@@ -1,5 +1,7 @@
 @import './variables.css';
 @import './animations.css';
+@import './motion.css';
+@import './responsive.css';
 
 *,
 *::before,
@@ -17,23 +19,7 @@ body {
   margin: 0;
   font-family: var(--font-body);
   color: var(--text-primary);
-  background:
-    radial-gradient(ellipse at top, rgba(20, 50, 80, 0.45), transparent 55%),
-    linear-gradient(160deg, #04070d 0%, #07111d 45%, #05080f 100%);
-  background-attachment: fixed;
-}
-
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(var(--grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-  background-size: 48px 48px;
-  opacity: 0.55;
-  z-index: 0;
+  background: var(--background-primary);
 }
 
 #root {
@@ -53,6 +39,14 @@ textarea {
   font: inherit;
 }
 
+button:focus-visible,
+a:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
 h1,
 h2,
 h3 {
@@ -66,16 +60,16 @@ p {
 }
 
 .glass-panel {
-  background: var(--bg-panel);
+  background: var(--surface-glass);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-glow);
-  backdrop-filter: blur(12px);
+  border-radius: var(--radius-medium);
+  box-shadow: var(--glow-small);
+  backdrop-filter: blur(10px);
 }
 
 .page-title {
   font-size: clamp(1.1rem, 2vw, 1.45rem);
-  color: var(--cyan);
+  color: var(--accent-primary);
 }
 
 .page-subtitle {
@@ -98,5 +92,10 @@ p {
 }
 
 .error-text {
-  color: var(--danger);
+  color: var(--status-error);
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
 }

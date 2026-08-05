@@ -1,20 +1,78 @@
 :root {
-  --bg-deep: #05080f;
-  --bg-panel: rgba(10, 18, 32, 0.72);
-  --bg-panel-strong: rgba(12, 22, 40, 0.9);
-  --border-subtle: rgba(90, 180, 220, 0.18);
-  --border-strong: rgba(80, 210, 255, 0.45);
-  --cyan: #4fd2ff;
-  --cyan-dim: #2a8fb8;
-  --cyan-glow: rgba(79, 210, 255, 0.35);
-  --text-primary: #e8f6ff;
-  --text-muted: #8aa4b8;
-  --danger: #ff6b7a;
-  --warning: #ffc857;
-  --success: #4dffb5;
+  /* Surfaces */
+  --background-primary: #03060c;
+  --background-secondary: #07101c;
+  --surface-glass: rgba(10, 20, 36, 0.62);
+  --surface-raised: rgba(14, 28, 48, 0.88);
+  --border-subtle: rgba(110, 190, 230, 0.16);
+  --border-active: rgba(120, 220, 255, 0.5);
+
+  /* Text */
+  --text-primary: #eaf6ff;
+  --text-secondary: #9eb8cc;
+  --text-muted: #6f8aa0;
+
+  /* Accents */
+  --accent-primary: #4fd2ff;
+  --accent-soft: rgba(79, 210, 255, 0.14);
+  --accent-bright: #9aecff;
+
+  /* Status */
+  --status-success: #4dffb5;
+  --status-warning: #ffc857;
+  --status-error: #ff6b7a;
+  --status-offline: #5a7185;
+
+  /* Glow */
+  --glow-small: 0 0 12px rgba(79, 210, 255, 0.18);
+  --glow-medium: 0 0 28px rgba(79, 210, 255, 0.22);
+  --glow-large: 0 0 48px rgba(79, 210, 255, 0.28);
+
+  /* Radius / spacing */
+  --radius-small: 8px;
+  --radius-medium: 14px;
+  --radius-large: 22px;
+  --spacing-xs: 0.35rem;
+  --spacing-sm: 0.6rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2.25rem;
+
+  /* Typography */
   --font-display: 'Orbitron', 'Segoe UI', sans-serif;
   --font-body: 'IBM Plex Sans', 'Segoe UI', sans-serif;
-  --radius: 14px;
-  --shadow-glow: 0 0 24px rgba(79, 210, 255, 0.12);
+  --font-mono: 'IBM Plex Mono', 'Consolas', monospace;
+
+  /* Motion */
+  --motion-instant: 80ms;
+  --motion-fast: 160ms;
+  --motion-normal: 280ms;
+  --motion-slow: 520ms;
+  --motion-cinematic: 900ms;
+  --ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Legacy aliases (Phase 1–4 components) */
+  --bg-deep: var(--background-primary);
+  --bg-panel: var(--surface-glass);
+  --bg-panel-strong: var(--surface-raised);
+  --border-strong: var(--border-active);
+  --cyan: var(--accent-primary);
+  --cyan-dim: #2a8fb8;
+  --cyan-glow: var(--accent-soft);
+  --danger: var(--status-error);
+  --warning: var(--status-warning);
+  --success: var(--status-success);
+  --radius: var(--radius-medium);
+  --shadow-glow: var(--glow-medium);
   --grid-line: rgba(79, 210, 255, 0.05);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 1ms;
+    --motion-normal: 1ms;
+    --motion-slow: 1ms;
+    --motion-cinematic: 1ms;
+  }
 }

@@ -1,6 +1,6 @@
 # Architecture
 
-Jarvis Workspace is a local monorepo with a clear split between a Python backend (control plane) and a React frontend (presentation plane). Phase 1 established communication and the dashboard shell. Phase 2 added offline wake-phrase detection. Phase 3 adds offline Piper TTS. Phase 4 adds Windows workspace application launch / restore / focus after the welcome sequence.
+Jarvis Workspace is a local monorepo with a clear split between a Python backend (control plane) and a React frontend (presentation plane). Phases 1–4 established communication, wake phrase, TTS, and Windows workspace launching. Phase 5 adds the cinematic dashboard presentation layer on top of the same backend events.
 
 ## Backend responsibilities
 
@@ -204,3 +204,41 @@ Typical extension path:
 2. Keep approved-application security boundary intact
 3. Publish additional WebSocket event types using `WebSocketMessage`
 4. Keep health, state, and connection plumbing unchanged
+
+## Phase 5 dashboard architecture
+
+### Design choice: no snapshot endpoint
+
+Existing REST endpoints (`/api/health`, `/api/state`, `/api/voice/status`, `/api/tts/status`, `/api/workspace/status`, `/api/workspace/applications`) plus reconnect refresh are sufficient. A dedicated `/api/dashboard/snapshot` was not added, to avoid duplicating status objects.
+
+### Dashboard state
+
+`DashboardProvider` owns:
+
+- Single WebSocket via `useJarvisSocket`
+- Domain hooks: voice, speech, workspace (unchanged business APIs)
+- Shared health polling + bounded metric history (one loop)
+- Structured timeline via `activityReducer` + `dispatchDashboardEvent`
+- Stale flag, announcements, reduced-motion preference, tab visibility
+
+Components consume `useDashboard()` — they do not open additional sockets or health pollers.
+
+### Panel navigation
+
+Panels: Applications (0), Core (1), System (2). Routes `/applications`, `/`, `/system` share one mounted `PanelViewport` layout so swipe state survives navigation. Settings remains `/settings` outside the swipe track. Pointer Events drive drag/swipe; interactive controls use `data-no-swipe`.
+
+### Event dispatcher
+
+`dispatchDashboardEvent` maps known WebSocket types to timeline entries and announcements. Domain hooks still receive the raw message. Unknown types log a development warning and do not crash the UI. Timeline IDs deduplicate reconnect replays.
+
+### State-driven animation
+
+`JarvisCore` maps `AssistantState` to CSS visual modes. Reduced motion and hidden tabs stop continuous rotation. Progress arcs use real TTS or workspace ratios — never random pulse values.
+
+### Fullscreen
+
+Browser Fullscreen API only after a user gesture. Escape is observed via `fullscreenchange`. Automatic fullscreen after wake is intentionally unsupported.
+
+### Future desktop packaging
+
+Later phases may add system-tray / kiosk packaging; Phase 5 remains a browser dashboard.

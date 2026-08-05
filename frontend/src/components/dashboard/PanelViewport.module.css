@@ -1,0 +1,89 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  min-height: 0;
+  flex: 1;
+}
+
+.hiddenTab .track {
+  animation-play-state: paused;
+}
+
+.viewport {
+  position: relative;
+  overflow: hidden;
+  flex: 1;
+  min-height: 28rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-large);
+  background:
+    radial-gradient(ellipse at 50% 20%, rgba(79, 210, 255, 0.08), transparent 55%),
+    linear-gradient(180deg, rgba(8, 16, 30, 0.9), rgba(4, 8, 16, 0.95));
+  touch-action: pan-y;
+}
+
+.track {
+  display: flex;
+  width: 300%;
+  height: 100%;
+  transition: transform var(--motion-cinematic) var(--ease-emphasized);
+  will-change: transform;
+}
+
+.fadeMode {
+  width: 100%;
+  display: block;
+  transform: none !important;
+}
+
+.fadeMode .panel {
+  display: none;
+  width: 100%;
+}
+
+.fadeMode .panelActive {
+  display: block;
+  animation: panel-fade var(--motion-normal) var(--ease-standard);
+}
+
+.panel {
+  width: calc(100% / 3);
+  min-width: calc(100% / 3);
+  height: 100%;
+  overflow: auto;
+  padding: var(--spacing-lg);
+  box-sizing: border-box;
+}
+
+.fadeMode .panel {
+  min-width: 100%;
+  width: 100%;
+}
+
+.panelActive {
+  opacity: 1;
+}
+
+.panelHidden {
+  opacity: 0.92;
+}
+
+@keyframes panel-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 900px) {
+  .panel {
+    padding: var(--spacing-md);
+  }
+
+  .viewport {
+    min-height: 24rem;
+  }
+}

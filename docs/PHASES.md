@@ -28,60 +28,57 @@
 - `ActivationCoordinator` owns wake → speech → resume flow
 - Speech-status dashboard and output-device selection
 
-## Phase 4 (current) — Windows workspace launching
+## Phase 4 (complete) — Windows workspace launching
 
 - Windows application launching / restoring / best-effort focusing
 - Existing-process detection (`psutil`) and window control (`pywin32`)
 - Configurable application registry (`backend/config/applications.json`)
 - Gmail and news HTTPS URL opening through Chrome
-- Workspace progress on the dashboard (per-application status)
-- Manual open / focus / start / cancel APIs and development tools
+- Workspace progress events and manual open / focus controls
 - Microphone remains paused until workspace launch finishes
 
-Phase 4 does **not** include advanced cinematic dashboard graphs, live window previews, calendar, email unread counts, news summarisation, Ollama, unrestricted AI conversation, arbitrary voice commands, or Windows startup packaging.
+## Phase 5 (current) — Advanced cinematic dashboard
+
+- Original dark futuristic Jarvis core (CSS/SVG, no copyrighted artwork)
+- Three-panel navigation: Applications · Core · System
+- Route synchronisation (`/applications`, `/`, `/system`)
+- Mouse drag, touch swipe, keyboard arrows, dots, prev/next controls
+- State-driven activation visuals from real WebSocket events
+- Structured activity timeline with deduplication
+- Real CPU / memory session sparklines (current session only)
+- Enhanced application command cards
+- Fullscreen control (user gesture required)
+- Responsive layout, accessibility announcements, reduced motion
+- Vitest + React Testing Library coverage for dashboard logic/UI
+
+Phase 5 does **not** include GPU/disk/network graphs, live thumbnails, calendar, unread email, news aggregation, Ollama, unrestricted voice commands, or Windows packaging.
 
 ## Future phases
 
-### Advanced cinematic dashboard
+### Phase 6 — Advanced system monitoring
 
-Richer visuals and motion beyond the foundation shell.
+Disk information, network throughput, battery status, process table, GPU data where supported, hardware temperatures where supported.
 
-### System monitoring graphs
+### Phase 7 — Rich application command centre
 
-Expand beyond CPU/memory to GPU, disk, network, battery, and process lists with charts.
+Better app switching, global dashboard shortcut, optional live thumbnails, safer browser integration.
 
-### Application command centre
+### Phase 8 — Calendar and meetings
 
-Clickable live grid of open / controlled applications with richer switching.
+Calendar summaries, Gmail unread counts, Outlook integration, Teams meeting links.
 
-### Live window previews
+### Phase 9 — News and current affairs
 
-Thumbnail / preview surfaces for open applications.
+RSS feeds, categories, spoken briefing (beyond opening a news URL).
 
-### Calendar and email
+### Phase 10 — Local AI and natural voice commands
 
-Unread mail counts and calendar summaries through dedicated integration adapters.
+Ollama integration and context-aware spoken commands.
 
-### News and current affairs
+### Phase 11 — Productivity modes
 
-Headlines for the dashboard / news tile (beyond opening a news URL).
+Focus, development, work, and relax modes.
 
-### Natural voice commands
+### Phase 12 — Windows desktop packaging
 
-Structured spoken commands beyond the fixed wake phrase and welcome sequence.
-
-### Local AI
-
-Optional on-device reasoning behind `IntegrationService` (for example Ollama).
-
-### Productivity modes
-
-Structured routines beyond the fixed welcome + workspace launch.
-
-### Global keyboard shortcut
-
-Bring the dashboard or assistant forward without voice.
-
-### Windows startup packaging
-
-Package the assistant for convenient Windows startup / background operation.
+System tray, automatic startup, global keyboard shortcut, kiosk-style dashboard mode.

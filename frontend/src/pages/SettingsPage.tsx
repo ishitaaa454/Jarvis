@@ -1,20 +1,16 @@
 import { useEffect, useState } from 'react';
 
+import { useDashboard } from '../context/DashboardContext';
 import { describeApplicationStatus } from '../hooks/useWorkspaceStatus';
 import { describeTtsStatus } from '../hooks/useSpeechStatus';
 import { describeVoiceStatus } from '../hooks/useVoiceStatus';
 import { fetchTtsDevices } from '../services/ttsApi';
 import { fetchVoiceDevices } from '../services/voiceApi';
-import type { OutputDeviceInfo, TtsStatus } from '../types/speech';
-import type { AudioDevice, VoiceStatus } from '../types/voice';
-import type { ApplicationRuntimeStatus } from '../types/workspace';
+import type { OutputDeviceInfo } from '../types/speech';
+import type { AudioDevice } from '../types/voice';
 import styles from './SettingsPage.module.css';
 
 const LATER_SECTIONS = [
-  {
-    title: 'Dashboard appearance',
-    description: 'Theme density, accent intensity, and layout preferences.',
-  },
   {
     title: 'Integrations',
     description: 'Calendar, email, news, and local AI connectors.',
@@ -35,47 +31,19 @@ const WELCOME_LINES = [
   'Opening your workspace now.',
 ];
 
-interface SettingsPageProps {
-  voiceStatus: VoiceStatus | null;
-  voiceLoading: boolean;
-  voiceError: string | null;
-  voicePending: boolean;
-  onStart: () => void;
-  onStop: () => void;
-  onSelectDevice: (deviceId: number) => void;
-  onRetry: () => void;
-  ttsStatus: TtsStatus | null;
-  ttsLoading: boolean;
-  ttsError: string | null;
-  ttsPending: boolean;
-  onSelectOutputDevice: (deviceId: number) => void;
-  onTestWelcome: () => void;
-  onCancelSpeech: () => void;
-  onRetryTts: () => void;
-  workspaceApplications: ApplicationRuntimeStatus[];
-  workspaceLoading: boolean;
-}
+export function SettingsPage() {
+  const {
+    voice,
+    speech,
+    workspace,
+    reducedMotionOverride,
+    setReducedMotionOverride,
+    reducedMotion,
+  } = useDashboard();
 
-export function SettingsPage({
-  voiceStatus,
-  voiceLoading,
-  voiceError,
-  voicePending,
-  onStart,
-  onStop,
-  onSelectDevice,
-  onRetry,
-  ttsStatus,
-  ttsLoading,
-  ttsError,
-  ttsPending,
-  onSelectOutputDevice,
-  onTestWelcome,
-  onCancelSpeech,
-  onRetryTts,
-  workspaceApplications,
-  workspaceLoading,
-}: SettingsPageProps) {
+  const voiceStatus = voice.voiceStatus;
+  const ttsStatus = speech.ttsStatus;
+
   const [devices, setDevices] = useState<AudioDevice[]>([]);
   const [devicesError, setDevicesError] = useState<string | null>(null);
   const [devicesLoading, setDevicesLoading] = useState(true);
@@ -85,24 +53,21 @@ export function SettingsPage({
 
   useEffect(() => {
     let cancelled = false;
-    const load = async () => {
-      try {
-        const list = await fetchVoiceDevices();
+    void fetchVoiceDevices()
+      .then((list) => {
         if (!cancelled) {
           setDevices(list);
           setDevicesError(null);
         }
-      } catch (err) {
+      })
+      .catch((err: unknown) => {
         if (!cancelled) {
-          setDevicesError(
-            err instanceof Error ? err.message : 'Unable to list microphones',
-          );
+          setDevicesError(err instanceof Error ? err.message : 'Unable to list microphones');
         }
-      } finally {
+      })
+      .finally(() => {
         if (!cancelled) setDevicesLoading(false);
-      }
-    };
-    void load();
+      });
     return () => {
       cancelled = true;
     };
@@ -110,24 +75,23 @@ export function SettingsPage({
 
   useEffect(() => {
     let cancelled = false;
-    const load = async () => {
-      try {
-        const list = await fetchTtsDevices();
+    void fetchTtsDevices()
+      .then((list) => {
         if (!cancelled) {
           setOutputs(list);
           setOutputsError(null);
         }
-      } catch (err) {
+      })
+      .catch((err: unknown) => {
         if (!cancelled) {
           setOutputsError(
             err instanceof Error ? err.message : 'Unable to list output devices',
           );
         }
-      } finally {
+      })
+      .finally(() => {
         if (!cancelled) setOutputsLoading(false);
-      }
-    };
-    void load();
+      });
     return () => {
       cancelled = true;
     };
@@ -135,14 +99,14 @@ export function SettingsPage({
 
   const status = voiceStatus?.status;
   const showRetry =
-    status === 'ERROR' || status === 'MODEL_MISSING' || Boolean(voiceError);
+    status === 'ERROR' || status === 'MODEL_MISSING' || Boolean(voice.error);
   const canStart =
-    !voicePending &&
+    !voice.pending &&
     status !== 'LISTENING' &&
     status !== 'STARTING' &&
     status !== 'DISABLED';
   const canStop =
-    !voicePending && (status === 'LISTENING' || status === 'ACTIVATION_DETECTED');
+    !voice.pending && (status === 'LISTENING' || status === 'ACTIVATION_DETECTED');
 
   const ttsReady = ttsStatus?.status === 'READY';
   const speaking =
@@ -154,14 +118,47 @@ export function SettingsPage({
     ttsStatus?.status === 'MODEL_MISSING' ||
     ttsStatus?.status === 'ENGINE_MISSING' ||
     ttsStatus?.status === 'OUTPUT_UNAVAILABLE' ||
-    Boolean(ttsError);
+    Boolean(speech.error);
 
   return (
     <div className={styles.page}>
       <header>
         <h1 className="page-title">SETTINGS</h1>
-        <p className="page-subtitle">Voice listener and speech output</p>
+        <p className="page-subtitle">Voice, speech, workspace, and motion preferences</p>
       </header>
+
+      <section className={`glass-panel ${styles.card}`} aria-labelledby="motion-settings-heading">
+        <h2 id="motion-settings-heading">Motion</h2>
+        <p className="muted">
+          Respects your system reduced-motion preference. Optional override below.
+        </p>
+        <label className={styles.field}>
+          Reduced motion
+          <select
+            aria-label="Reduced motion preference"
+            value={
+              reducedMotionOverride === null
+                ? 'system'
+                : reducedMotionOverride
+                  ? 'on'
+                  : 'off'
+            }
+            onChange={(event) => {
+              const value = event.target.value;
+              if (value === 'system') setReducedMotionOverride(null);
+              else setReducedMotionOverride(value === 'on');
+            }}
+          >
+            <option value="system">Follow system ({reducedMotion ? 'reduce' : 'full'})</option>
+            <option value="on">Always reduce</option>
+            <option value="off">Prefer full motion</option>
+          </select>
+        </label>
+        <p className="muted">
+          Browser fullscreen requires a user click. The dashboard cannot enter fullscreen
+          automatically after wake-phrase detection.
+        </p>
+      </section>
 
       <section className={`glass-panel ${styles.card}`} aria-labelledby="wake-settings-heading">
         <h2 id="wake-settings-heading">Wake phrase</h2>
@@ -185,12 +182,12 @@ export function SettingsPage({
             Microphone
             <select
               aria-label="Select microphone"
-              disabled={voicePending || devicesLoading || devices.length === 0}
+              disabled={voice.pending || devicesLoading || devices.length === 0}
               value={voiceStatus?.microphone?.id ?? ''}
               onChange={(event) => {
                 const value = event.target.value;
                 if (value === '') return;
-                onSelectDevice(Number(value));
+                void voice.selectDevice(Number(value));
               }}
             >
               <option value="">
@@ -226,21 +223,39 @@ export function SettingsPage({
             {devicesError}
           </p>
         ) : null}
-        {voiceError ? (
+        {voice.error ? (
           <p className={styles.error} role="alert">
-            {voiceError}
+            {voice.error}
           </p>
         ) : null}
 
         <div className={styles.actions}>
-          <button type="button" className={styles.actionBtn} onClick={onStart} disabled={!canStart} aria-label="Start wake listener">
+          <button
+            type="button"
+            className={styles.actionBtn}
+            onClick={() => void voice.start()}
+            disabled={!canStart}
+            aria-label="Start wake listener"
+          >
             Start
           </button>
-          <button type="button" className={styles.actionBtnSecondary} onClick={onStop} disabled={!canStop} aria-label="Stop wake listener">
+          <button
+            type="button"
+            className={styles.actionBtnSecondary}
+            onClick={() => void voice.stop()}
+            disabled={!canStop}
+            aria-label="Stop wake listener"
+          >
             Stop
           </button>
           {showRetry ? (
-            <button type="button" className={styles.actionBtnSecondary} onClick={onRetry} disabled={voicePending} aria-label="Retry starting wake listener">
+            <button
+              type="button"
+              className={styles.actionBtnSecondary}
+              onClick={() => void voice.start()}
+              disabled={voice.pending}
+              aria-label="Retry starting wake listener"
+            >
               Retry
             </button>
           ) : null}
@@ -251,14 +266,9 @@ export function SettingsPage({
         <h2 id="speech-settings-heading">Speech output</h2>
         <p className="muted">
           Offline Piper TTS with British male voice <code>en_GB-alan-medium</code>.
-          Welcome lines are fixed in this phase.
         </p>
 
         <div className={styles.voiceGrid} aria-live="polite">
-          <div className={styles.stat}>
-            <span>TTS enabled</span>
-            <strong>{ttsStatus?.enabled ? 'Yes' : 'No'}</strong>
-          </div>
           <div className={styles.stat}>
             <span>Piper status</span>
             <strong>{describeTtsStatus(ttsStatus?.status)}</strong>
@@ -267,37 +277,16 @@ export function SettingsPage({
             <span>Voice</span>
             <strong>{ttsStatus?.voice ?? 'en_GB-alan-medium'}</strong>
           </div>
-          <div className={styles.stat}>
-            <span>Model</span>
-            <strong>{ttsStatus?.model_loaded ? 'Loaded' : 'Missing'}</strong>
-          </div>
-          <div className={styles.stat}>
-            <span>Volume</span>
-            <strong>{ttsStatus?.volume ?? '—'}</strong>
-          </div>
-          <div className={styles.stat}>
-            <span>Length scale</span>
-            <strong>{ttsStatus?.length_scale ?? '—'}</strong>
-          </div>
-          <div className={styles.stat}>
-            <span>Sentence pause</span>
-            <strong>
-              {ttsStatus?.sentence_pause_ms != null
-                ? `${ttsStatus.sentence_pause_ms} ms`
-                : '—'}
-            </strong>
-          </div>
-
           <label className={styles.field}>
             Output device
             <select
               aria-label="Select audio output device"
-              disabled={ttsPending || outputsLoading || outputs.length === 0}
+              disabled={speech.pending || outputsLoading || outputs.length === 0}
               value={ttsStatus?.output_device?.id ?? ''}
               onChange={(event) => {
                 const value = event.target.value;
                 if (value === '') return;
-                onSelectOutputDevice(Number(value));
+                void speech.selectDevice(Number(value));
               }}
             >
               <option value="">
@@ -327,19 +316,18 @@ export function SettingsPage({
             {outputsError}
           </p>
         ) : null}
-        {ttsError ? (
+        {speech.error ? (
           <p className={styles.error} role="alert">
-            {ttsError}
+            {speech.error}
           </p>
         ) : null}
-        {ttsLoading || voiceLoading ? <p className="muted">Loading…</p> : null}
 
         <div className={styles.actions}>
           <button
             type="button"
             className={styles.actionBtn}
-            onClick={onTestWelcome}
-            disabled={ttsPending || speaking || !ttsReady}
+            onClick={() => void speech.testWelcome()}
+            disabled={speech.pending || speaking || !ttsReady}
             aria-label="Test welcome sequence"
           >
             Test welcome
@@ -347,8 +335,8 @@ export function SettingsPage({
           <button
             type="button"
             className={styles.actionBtnSecondary}
-            onClick={onCancelSpeech}
-            disabled={ttsPending || !speaking}
+            onClick={() => void speech.cancel()}
+            disabled={speech.pending || !speaking}
             aria-label="Cancel speech"
           >
             Cancel
@@ -357,8 +345,8 @@ export function SettingsPage({
             <button
               type="button"
               className={styles.actionBtnSecondary}
-              onClick={onRetryTts}
-              disabled={ttsPending}
+              onClick={() => void speech.retry()}
+              disabled={speech.pending}
               aria-label="Retry speech engine"
             >
               Retry
@@ -370,14 +358,13 @@ export function SettingsPage({
       <section className={`glass-panel ${styles.card}`} aria-labelledby="workspace-apps-heading">
         <h2 id="workspace-apps-heading">Workspace applications</h2>
         <p className="muted">
-          Default app launch order for workspace initialization. Read-only in this
-          phase — edit <code>backend/config/applications.json</code> to change enable
-          state, order, or launch details.
+          Default launch order. Edit <code>backend/config/applications.json</code> for
+          enable state and launch details. Arbitrary commands are not accepted.
         </p>
 
-        {workspaceLoading ? (
+        {workspace.loading ? (
           <p className="muted">Loading applications…</p>
-        ) : workspaceApplications.length === 0 ? (
+        ) : workspace.applications.length === 0 ? (
           <p className="muted">No workspace applications configured.</p>
         ) : (
           <div className={styles.tableWrap}>
@@ -393,7 +380,7 @@ export function SettingsPage({
                 </tr>
               </thead>
               <tbody>
-                {workspaceApplications.map((app) => (
+                {workspace.applications.map((app) => (
                   <tr key={app.applicationId}>
                     <td>{app.order}</td>
                     <td>{app.displayName}</td>
@@ -407,7 +394,6 @@ export function SettingsPage({
             </table>
           </div>
         )}
-        <p className="placeholder-note">Enable/disable controls arrive in a later phase</p>
       </section>
 
       <div className={styles.list}>
@@ -415,13 +401,7 @@ export function SettingsPage({
           <section key={section.title} className={`glass-panel ${styles.card}`}>
             <h2>{section.title}</h2>
             <p className="muted">{section.description}</p>
-            <p className="placeholder-note">Read-only placeholder — Available in a later phase</p>
-            <fieldset disabled className={styles.fieldset}>
-              <label>
-                Value
-                <input type="text" value="Not configured" readOnly />
-              </label>
-            </fieldset>
+            <p className="placeholder-note">Available in a later phase</p>
           </section>
         ))}
       </div>

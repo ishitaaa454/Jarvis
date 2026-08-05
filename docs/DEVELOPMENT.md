@@ -190,6 +190,53 @@ cd scripts
 .\test-workspace.ps1 -NoFocus
 ```
 
+## Dashboard development (Phase 5)
+
+### Adding a dashboard panel
+
+1. Extend `DashboardPanelId` / `PANEL_ORDER` / routes
+2. Render the panel inside `PanelViewport`
+3. Keep Settings outside the swipe track unless intentionally included
+4. Avoid a second WebSocket or health poller
+
+### Adding a core state appearance
+
+Map the assistant state in `mapAssistantToCoreState` and add a CSS modifier on `JarvisCore`. Prefer transform/opacity. Respect reduced motion.
+
+### Adding a timeline event
+
+Extend `dispatchDashboardEvent` with a stable id via `makeTimelineId`. Do not append from multiple components for the same event.
+
+### WebSocket rules
+
+- One connection (`useJarvisSocket`)
+- One fan-out handler in `DashboardProvider`
+- Domain hooks update domain state; dispatcher updates timeline/announcements
+- Re-fetch authoritative REST status after reconnect
+
+### Metrics rules
+
+- Sample only from the shared `useHealthMetrics` loop
+- Bound history (~90 samples)
+- Never invent GPU, disk, network, or temperature values
+- Label unavailable metrics as later-phase placeholders
+
+### Motion and accessibility
+
+- Use CSS variables `--motion-*` and `--ease-*`
+- Disable continuous animation under `prefers-reduced-motion`
+- Announce wake, speech start, workspace start/ready, and errors via `aria-live`
+- Keep keyboard panel navigation and visible focus rings
+
+### Testing
+
+```powershell
+cd frontend
+npm test
+npm run typecheck
+npm run build
+```
+
 ## Logging expectations
 
 - Startup and shutdown must appear in the terminal and `backend/logs/jarvis.log`

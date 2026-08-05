@@ -1,0 +1,73 @@
+.nav {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    'prev dots next'
+    'labels labels labels';
+  gap: 0.55rem 0.75rem;
+  align-items: center;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-medium);
+  background: var(--surface-glass);
+}
+
+.arrow {
+  grid-area: auto;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--accent-primary);
+  cursor: pointer;
+}
+
+.arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.55rem;
+}
+
+.dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-active);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.dotActive {
+  background: var(--accent-primary);
+  box-shadow: var(--glow-small);
+}
+
+.labels {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.labelBtn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 0.2rem 0.35rem;
+}
+
+.labelActive {
+  color: var(--accent-bright);
+}

@@ -1,8 +1,68 @@
 # Jarvis Workspace
 
-Local Windows desktop assistant. Phase 1 delivered the FastAPI + React foundation. Phase 2 added offline wake-phrase detection. Phase 3 added offline British male text-to-speech (Piper). **Phase 4** opens and restores the configured Windows workspace applications after the welcome sequence.
+Local Windows desktop assistant. Phases 1–4 delivered the FastAPI backend, offline wake phrase, Piper TTS, and Windows workspace launching. **Phase 5** transforms the React UI into an original cinematic three-panel dashboard driven by real backend state.
 
-**Phase 4 does not include** advanced cinematic dashboard graphs, live window previews, calendar, email unread counts, news summarisation, Ollama, unrestricted voice commands, or Windows startup packaging.
+**Phase 5 does not include** GPU/network/temperature graphs, live window previews, calendar, unread email, news aggregation, Ollama, unrestricted voice commands, or Windows packaging.
+
+## Phase 5 — Cinematic dashboard
+
+### Start the dashboard
+
+```powershell
+cd scripts
+.\start-development.ps1
+```
+
+Open http://localhost:5173 — Core panel is the default.
+
+### Navigate between panels
+
+| Control | Behaviour |
+| --- | --- |
+| Routes | `/applications`, `/` (Core), `/system`, `/settings` |
+| Arrow keys | ← previous · → next · Home returns to Core |
+| Mouse drag / trackpad | Horizontal drag snaps to the next panel |
+| Touch swipe | Same as drag |
+| Navigation dots / labels | Jump directly |
+| Prev / Next buttons | Step one panel |
+| Browser Back / Forward | Restores the matching panel |
+
+Settings is a separate page (not part of the swipe track).
+
+### Fullscreen
+
+Use **Enter Fullscreen** in the header. Browsers require a user click — Jarvis cannot enter fullscreen automatically after “Wake up, Jarvis.” Escape exits fullscreen. Full kiosk mode belongs to a later packaging phase.
+
+### Jarvis core states
+
+The core reacts to real assistant state: offline, listening, processing, speaking, initializing workspace, opening applications, ready, error. Speaking shows the current sentence and `1/3`…`3/3`. Workspace opening shows the current app and `n/7` progress from the backend.
+
+### Activity timeline
+
+Events are categorised (SYSTEM, VOICE, SPEECH, WORKSPACE, APPLICATION, CONNECTION, ERROR). Replayed WebSocket events are deduplicated. Clear only affects the local UI timeline — backend logs are unchanged. Window titles are not shown.
+
+### Application cards
+
+Cards use Phase 4 status only: Active, Background, Ready to launch, Not configured, Action failed, and focus-limited running. Open / Focus call approved APIs. No branded logos — letter initials only.
+
+### Metrics
+
+CPU and memory are live from `/api/health`. Sparklines are **live session history** only (in-memory). GPU, disk, network, battery, and temperatures are labelled **AVAILABLE IN A LATER PHASE** with no fake numbers.
+
+### Connection loss
+
+Disconnected clients show CONNECTION LOST / STALE. On reconnect, voice, TTS, workspace, health, and assistant state are refreshed. No second WebSocket is opened.
+
+### Reduced motion
+
+`prefers-reduced-motion: reduce` disables continuous ring rotation and decorative drift. Settings can override. Tab hide pauses decorative ambient motion; WebSocket handling continues.
+
+### Returning after focusing an app
+
+Focus may place another window in front. Use Alt+Tab or the taskbar. A future global shortcut is planned.
+
+No paid API or cloud service is required for the dashboard.
+
 
 ## Prerequisites
 
@@ -379,6 +439,7 @@ pytest -q
 
 cd ..\frontend
 npm run typecheck
+npm test
 npm run build
 ```
 

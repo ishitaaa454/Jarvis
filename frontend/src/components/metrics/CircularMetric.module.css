@@ -1,0 +1,77 @@
+.card {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-medium);
+  background: var(--surface-glass);
+  padding: 0.85rem;
+}
+
+.top {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.ring {
+  width: 5.2rem;
+  height: 5.2rem;
+  flex: 0 0 auto;
+}
+
+.track {
+  fill: none;
+  stroke: rgba(79, 210, 255, 0.12);
+  stroke-width: 6;
+}
+
+.valueRing {
+  fill: none;
+  stroke: var(--accent-primary);
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset var(--motion-normal) var(--ease-standard);
+}
+
+.valueText {
+  fill: var(--text-primary);
+  font-size: 0.78rem;
+  font-family: var(--font-display);
+}
+
+.label {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+.bounds {
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.spark {
+  width: 100%;
+  height: 2.2rem;
+  margin-top: 0.55rem;
+}
+
+.sparkLine {
+  stroke: var(--accent-primary);
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.sparkEmpty {
+  stroke: rgba(79, 210, 255, 0.2);
+  stroke-width: 1;
+  fill: none;
+}

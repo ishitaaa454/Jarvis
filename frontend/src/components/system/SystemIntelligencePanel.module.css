@@ -1,0 +1,93 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.header h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.header p {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.tableSection {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-medium);
+  background: var(--surface-glass);
+  padding: 0.9rem;
+}
+
+.tableSection h3,
+.future h3 {
+  margin: 0 0 0.65rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.4rem 0.2rem;
+  border-bottom: 1px solid rgba(79, 210, 255, 0.08);
+  font-size: 0.84rem;
+  vertical-align: top;
+}
+
+th {
+  width: 42%;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.futureGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.65rem;
+}
+
+.futureCard {
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-medium);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 4.5rem;
+}
+
+.futureCard strong {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.futureCard span {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 800px) {
+  .metrics {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,17 @@
+@media (max-width: 1366px) {
+  :root {
+    --spacing-xl: 1.75rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .glass-panel {
+    backdrop-filter: none;
+  }
+}
+
+@media (max-width: 720px) {
+  body {
+    font-size: 15px;
+  }
+}
