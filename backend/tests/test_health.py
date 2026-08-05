@@ -81,3 +81,7 @@ def test_websocket_receives_connection_event(client: TestClient) -> None:
         tts_message = websocket.receive_json()
         assert tts_message["type"] == "tts.status_changed"
         assert "status" in tts_message["payload"]
+
+        workspace_message = websocket.receive_json()
+        assert workspace_message["type"] == "workspace.status_changed"
+        assert "status" in workspace_message["payload"]

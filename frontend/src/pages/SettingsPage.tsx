@@ -1,18 +1,16 @@
 import { useEffect, useState } from 'react';
 
+import { describeApplicationStatus } from '../hooks/useWorkspaceStatus';
 import { describeTtsStatus } from '../hooks/useSpeechStatus';
 import { describeVoiceStatus } from '../hooks/useVoiceStatus';
 import { fetchTtsDevices } from '../services/ttsApi';
 import { fetchVoiceDevices } from '../services/voiceApi';
 import type { OutputDeviceInfo, TtsStatus } from '../types/speech';
 import type { AudioDevice, VoiceStatus } from '../types/voice';
+import type { ApplicationRuntimeStatus } from '../types/workspace';
 import styles from './SettingsPage.module.css';
 
 const LATER_SECTIONS = [
-  {
-    title: 'Workspace applications',
-    description: 'Default app launch order for workspace initialization.',
-  },
   {
     title: 'Dashboard appearance',
     description: 'Theme density, accent intensity, and layout preferences.',
@@ -22,6 +20,14 @@ const LATER_SECTIONS = [
     description: 'Calendar, email, news, and local AI connectors.',
   },
 ];
+
+const LAUNCH_TYPE_LABEL: Record<string, string> = {
+  executable: 'Executable',
+  url: 'URL',
+  uri: 'URI',
+  start_app: 'Start app',
+  browser_url: 'Browser URL',
+};
 
 const WELCOME_LINES = [
   'Welcome back, Ishita. Initializing your workspace.',
@@ -46,6 +52,8 @@ interface SettingsPageProps {
   onTestWelcome: () => void;
   onCancelSpeech: () => void;
   onRetryTts: () => void;
+  workspaceApplications: ApplicationRuntimeStatus[];
+  workspaceLoading: boolean;
 }
 
 export function SettingsPage({
@@ -65,6 +73,8 @@ export function SettingsPage({
   onTestWelcome,
   onCancelSpeech,
   onRetryTts,
+  workspaceApplications,
+  workspaceLoading,
 }: SettingsPageProps) {
   const [devices, setDevices] = useState<AudioDevice[]>([]);
   const [devicesError, setDevicesError] = useState<string | null>(null);
@@ -355,6 +365,49 @@ export function SettingsPage({
             </button>
           ) : null}
         </div>
+      </section>
+
+      <section className={`glass-panel ${styles.card}`} aria-labelledby="workspace-apps-heading">
+        <h2 id="workspace-apps-heading">Workspace applications</h2>
+        <p className="muted">
+          Default app launch order for workspace initialization. Read-only in this
+          phase — edit <code>backend/config/applications.json</code> to change enable
+          state, order, or launch details.
+        </p>
+
+        {workspaceLoading ? (
+          <p className="muted">Loading applications…</p>
+        ) : workspaceApplications.length === 0 ? (
+          <p className="muted">No workspace applications configured.</p>
+        ) : (
+          <div className={styles.tableWrap}>
+            <table className={styles.appsTable} aria-live="polite">
+              <thead>
+                <tr>
+                  <th scope="col">Order</th>
+                  <th scope="col">Application</th>
+                  <th scope="col">Launch type</th>
+                  <th scope="col">Enabled</th>
+                  <th scope="col">Running</th>
+                  <th scope="col">Last status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {workspaceApplications.map((app) => (
+                  <tr key={app.applicationId}>
+                    <td>{app.order}</td>
+                    <td>{app.displayName}</td>
+                    <td>{LAUNCH_TYPE_LABEL[app.launchType] ?? app.launchType}</td>
+                    <td>{app.enabled ? 'Yes' : 'No'}</td>
+                    <td>{app.running ? 'Yes' : 'No'}</td>
+                    <td>{describeApplicationStatus(app.status)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="placeholder-note">Enable/disable controls arrive in a later phase</p>
       </section>
 
       <div className={styles.list}>

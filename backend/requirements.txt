@@ -7,3 +7,4 @@ python-dotenv==1.0.1
 vosk==0.3.45
 sounddevice==0.5.1
 numpy==2.2.2
+pywin32==308; sys_platform == "win32"

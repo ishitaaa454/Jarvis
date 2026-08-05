@@ -17,6 +17,8 @@ os.environ.setdefault("VOICE_START_AUTOMATICALLY", "false")
 os.environ.setdefault("VOSK_MODEL_PATH", "models/vosk-model-small-en-us")
 os.environ.setdefault("TTS_ENABLED", "true")
 os.environ.setdefault("TTS_START_AUTOMATICALLY", "false")
+os.environ.setdefault("WORKSPACE_ENABLED", "true")
+os.environ.setdefault("WORKSPACE_START_AFTER_WELCOME", "false")
 
 
 @pytest.fixture(autouse=True)

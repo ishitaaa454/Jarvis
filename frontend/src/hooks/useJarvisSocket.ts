@@ -82,6 +82,45 @@ export function useJarvisSocket(): UseJarvisSocketResult {
         push('Welcome sequence complete', message.timestamp);
       } else if (message.type === 'assistant.activation_finished') {
         push('Wake listener resumed', message.timestamp);
+      } else if (message.type === 'assistant.workspace_initialization_started') {
+        push('Workspace initialization started', message.timestamp);
+      } else if (message.type === 'workspace.run_started') {
+        const total = Number(message.payload.total ?? 0);
+        push(`Workspace launch started (${total} application${total === 1 ? '' : 's'})`, message.timestamp);
+      } else if (message.type === 'workspace.application_status') {
+        const status = String(message.payload.status ?? '');
+        const displayName = String(message.payload.display_name ?? 'Application');
+        if (status === 'LAUNCHING') {
+          push(`Launching ${displayName}`, message.timestamp);
+        } else if (status === 'RESTORING' || status === 'ALREADY_RUNNING') {
+          push(`Restoring ${displayName}`, message.timestamp);
+        }
+      } else if (message.type === 'workspace.application_result') {
+        const displayName = String(message.payload.display_name ?? 'Application');
+        const result = String(message.payload.result ?? '');
+        if (result === 'FAILED') {
+          push(`${displayName} failed to open`, message.timestamp);
+        } else if (result === 'ALREADY_RUNNING') {
+          push(`${displayName} was already running`, message.timestamp);
+        } else if (result === 'LAUNCHED') {
+          push(`${displayName} launched`, message.timestamp);
+        }
+      } else if (message.type === 'assistant.workspace_ready') {
+        push('Workspace ready', message.timestamp);
+      } else if (message.type === 'workspace.run_finished') {
+        const status = String(message.payload.status ?? '');
+        if (status === 'PARTIAL_SUCCESS') {
+          push('Workspace launch finished (partially ready)', message.timestamp);
+        } else if (status === 'ERROR') {
+          push('Workspace launch failed', message.timestamp);
+        } else if (status === 'READY') {
+          push('Workspace launch finished', message.timestamp);
+        }
+      } else if (message.type === 'workspace.run_cancelled') {
+        push('Workspace launch cancelled', message.timestamp);
+      } else if (message.type === 'workspace.error') {
+        const text = typeof message.payload.message === 'string' ? message.payload.message : 'Workspace error';
+        push(`Workspace error: ${text}`, message.timestamp);
       }
 
       externalHandlerRef.current?.(message);

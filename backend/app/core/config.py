@@ -5,6 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -13,6 +14,34 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 def backend_root() -> Path:
     """Return the backend package root (directory containing app/)."""
     return Path(__file__).resolve().parents[2]
+
+
+_BLOCKED_URL_SCHEMES = {"javascript", "data", "file"}
+
+
+def validate_https_url(url: str, *, allow_localhost_http: bool = False) -> bool:
+    """Return True when a URL is safe to open in the workspace browser.
+
+    HTTPS is always allowed. Plain HTTP is only allowed for localhost/127.0.0.1
+    when ``allow_localhost_http`` is set (development convenience). Dangerous
+    schemes such as javascript/data/file are always rejected.
+    """
+    if not url:
+        return False
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return False
+
+    scheme = (parsed.scheme or "").lower()
+    if scheme in _BLOCKED_URL_SCHEMES:
+        return False
+    if scheme == "https":
+        return bool(parsed.netloc)
+    if scheme == "http" and allow_localhost_http:
+        host = (parsed.hostname or "").lower()
+        return host in {"localhost", "127.0.0.1"}
+    return False
 
 
 class Settings(BaseSettings):
@@ -74,6 +103,32 @@ class Settings(BaseSettings):
     tts_temp_directory: str = ""
     tts_delete_temp_audio: bool = True
 
+    # Phase 4 — Windows workspace launching
+    workspace_enabled: bool = True
+    workspace_start_after_welcome: bool = True
+    workspace_config_path: str = "config/applications.json"
+    workspace_default_profile: str = "default"
+    workspace_inter_app_delay_ms: int = Field(default=600, ge=0, le=30000)
+    workspace_ready_display_ms: int = Field(default=1500, ge=0, le=30000)
+    workspace_application_start_timeout_seconds: float = Field(default=15.0, gt=0)
+    workspace_window_discovery_timeout_seconds: float = Field(default=8.0, gt=0)
+    workspace_window_poll_interval_ms: int = Field(default=300, ge=50, le=10000)
+    workspace_focus_existing: bool = True
+    workspace_allow_url_launch: bool = True
+    workspace_allow_uri_launch: bool = True
+    workspace_allow_start_app_launch: bool = True
+    workspace_continue_on_application_error: bool = True
+    workspace_debug_window_discovery: bool = False
+    workspace_manual_start_in_production: bool = False
+
+    chrome_executable_path: str = ""
+    vscode_executable_path: str = ""
+    teams_executable_path: str = ""
+    whatsapp_executable_path: str = ""
+    spotify_executable_path: str = ""
+    gmail_url: str = "https://mail.google.com/"
+    news_url: str = "https://news.google.com/"
+
     @field_validator("voice_device_id", "tts_output_device_id", mode="before")
     @classmethod
     def blank_device_id_as_none(cls, value: Any) -> Any:
@@ -114,6 +169,36 @@ class Settings(BaseSettings):
     def validate_positive_float(cls, value: float) -> float:
         if value <= 0:
             raise ValueError("must be positive")
+        return value
+
+    @field_validator(
+        "workspace_inter_app_delay_ms",
+        "workspace_ready_display_ms",
+        "workspace_window_poll_interval_ms",
+    )
+    @classmethod
+    def validate_non_negative_int(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError("must be >= 0")
+        return value
+
+    @field_validator(
+        "workspace_application_start_timeout_seconds",
+        "workspace_window_discovery_timeout_seconds",
+    )
+    @classmethod
+    def validate_positive_timeout(cls, value: float) -> float:
+        if value <= 0:
+            raise ValueError("must be positive")
+        return value
+
+    @field_validator("gmail_url", "news_url")
+    @classmethod
+    def validate_workspace_url(cls, value: str) -> str:
+        if not value:
+            return value
+        if not validate_https_url(value, allow_localhost_http=True):
+            raise ValueError(f"Unsafe or non-HTTPS workspace URL rejected: {value!r}")
         return value
 
     @model_validator(mode="after")
@@ -159,6 +244,13 @@ class Settings(BaseSettings):
 
     def is_development(self) -> bool:
         return self.environment == "development"
+
+    def resolved_workspace_config_path(self) -> Path:
+        return self.resolve_path(self.workspace_config_path)
+
+    def is_workspace_url_allowed(self, url: str) -> bool:
+        """Validate a workspace-launch URL, allowing localhost HTTP in development."""
+        return validate_https_url(url, allow_localhost_http=self.is_development())
 
 
 @lru_cache

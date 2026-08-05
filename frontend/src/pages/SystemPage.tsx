@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react';
 import { MetricCard } from '../components/common/MetricCard';
 import { describeTtsStatus } from '../hooks/useSpeechStatus';
 import { describeVoiceStatus } from '../hooks/useVoiceStatus';
+import { describeWorkspaceStatus } from '../hooks/useWorkspaceStatus';
 import { environment } from '../config/environment';
 import { fetchHealth } from '../services/api';
 import type { TtsStatus } from '../types/speech';
 import type { VoiceStatus } from '../types/voice';
+import type { ApplicationRuntimeStatus, WorkspaceStatus } from '../types/workspace';
 import styles from './SystemPage.module.css';
 
 const LATER = 'Available in a later phase';
@@ -14,9 +16,25 @@ const LATER = 'Available in a later phase';
 interface SystemPageProps {
   voiceStatus: VoiceStatus | null;
   ttsStatus: TtsStatus | null;
+  workspaceStatus: WorkspaceStatus | null;
+  workspaceApplications: ApplicationRuntimeStatus[];
 }
 
-export function SystemPage({ voiceStatus, ttsStatus }: SystemPageProps) {
+function runningLabel(
+  applications: ApplicationRuntimeStatus[],
+  appId: string,
+): string {
+  const app = applications.find((a) => a.applicationId === appId);
+  if (!app) return 'Unknown';
+  return app.running ? 'Running' : 'Not running';
+}
+
+export function SystemPage({
+  voiceStatus,
+  ttsStatus,
+  workspaceStatus,
+  workspaceApplications,
+}: SystemPageProps) {
   const [cpu, setCpu] = useState<number | null>(null);
   const [memory, setMemory] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,6 +102,14 @@ export function SystemPage({ voiceStatus, ttsStatus }: SystemPageProps) {
         ? 'Speaking'
         : 'Idle';
   const suppression = ttsStatus?.microphone_suppressed ? 'Active' : 'Inactive';
+
+  const registryLabel = !workspaceStatus
+    ? 'Unknown'
+    : workspaceStatus.total_configured > 0
+      ? `${workspaceStatus.total_enabled}/${workspaceStatus.total_configured} enabled`
+      : workspaceStatus.last_error
+        ? 'Error'
+        : 'Empty';
 
   return (
     <div className={styles.page}>
@@ -159,6 +185,56 @@ export function SystemPage({ voiceStatus, ttsStatus }: SystemPageProps) {
             <tr>
               <td>Voice processing</td>
               <td>Local / Offline</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section className={`glass-panel ${styles.voiceTable}`} aria-labelledby="workspace-components">
+        <h2 id="workspace-components">Workspace components</h2>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Component</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Workspace controller</td>
+              <td>{describeWorkspaceStatus(workspaceStatus?.status)}</td>
+            </tr>
+            <tr>
+              <td>Application registry</td>
+              <td>{registryLabel}</td>
+            </tr>
+            <tr>
+              <td>Process discovery</td>
+              <td>Local / Active</td>
+            </tr>
+            <tr>
+              <td>Window control</td>
+              <td>Local / Active</td>
+            </tr>
+            <tr>
+              <td>Google Chrome</td>
+              <td>{runningLabel(workspaceApplications, 'chrome')}</td>
+            </tr>
+            <tr>
+              <td>Visual Studio Code</td>
+              <td>{runningLabel(workspaceApplications, 'vscode')}</td>
+            </tr>
+            <tr>
+              <td>Microsoft Teams</td>
+              <td>{runningLabel(workspaceApplications, 'teams')}</td>
+            </tr>
+            <tr>
+              <td>WhatsApp</td>
+              <td>{runningLabel(workspaceApplications, 'whatsapp')}</td>
+            </tr>
+            <tr>
+              <td>Spotify</td>
+              <td>{runningLabel(workspaceApplications, 'spotify')}</td>
             </tr>
           </tbody>
         </table>

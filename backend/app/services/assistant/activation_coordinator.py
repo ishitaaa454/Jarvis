@@ -10,16 +10,21 @@ from app.core.config import Settings, get_settings
 from app.core.events import (
     ASSISTANT_ACTIVATION_FINISHED,
     ASSISTANT_ACTIVATION_STARTED,
+    ASSISTANT_WORKSPACE_INITIALIZATION_STARTED,
+    ASSISTANT_WORKSPACE_READY,
     VOICE_WAKE_DETECTED,
+    WORKSPACE_ERROR,
     EventBus,
 )
 from app.core.state_manager import StateManager
+from app.models.application import WorkspaceServiceStatus
 from app.models.assistant_state import AssistantState
 from app.services.tts.piper_engine import PiperEngineError
 from app.services.tts.tts_service import SequenceBusyError, TtsService
 
 if TYPE_CHECKING:
     from app.services.voice.voice_service import VoiceService
+    from app.services.workspace.workspace_service import WorkspaceService
 
 logger = logging.getLogger(__name__)
 
@@ -39,12 +44,14 @@ class ActivationCoordinator:
         event_bus: EventBus | None = None,
         voice_service: VoiceService | None = None,
         tts_service: TtsService | None = None,
+        workspace_service: WorkspaceService | None = None,
     ) -> None:
         self._settings = settings or get_settings()
         self._state_manager = state_manager
         self._event_bus = event_bus
         self._voice = voice_service
         self._tts = tts_service
+        self._workspace = workspace_service
         self._lock = asyncio.Lock()
         self._active = False
         self._task: asyncio.Task[None] | None = None
@@ -58,11 +65,14 @@ class ActivationCoordinator:
         event_bus: EventBus,
         voice_service: VoiceService,
         tts_service: TtsService,
+        workspace_service: WorkspaceService | None = None,
     ) -> None:
         self._state_manager = state_manager
         self._event_bus = event_bus
         self._voice = voice_service
         self._tts = tts_service
+        if workspace_service is not None:
+            self._workspace = workspace_service
         # Disable Phase 2 auto-return; coordinator owns post-wake transitions.
         voice_service.set_activation_handoff(True)
 
@@ -124,6 +134,11 @@ class ActivationCoordinator:
         task = self._task
         if self._tts is not None:
             await self._tts.cancel()
+        if self._workspace is not None:
+            try:
+                await self._workspace.cancel()
+            except Exception:
+                logger.exception("Error cancelling workspace during activation cancel")
         if task and not task.done():
             task.cancel()
             try:
@@ -178,6 +193,9 @@ class ActivationCoordinator:
             if post > 0:
                 await asyncio.sleep(post)
 
+            if self._should_launch_workspace():
+                await self._run_workspace_sequence()
+
             await self._safe_resume_listening(return_idle=from_test and not self._wake_was_listening)
             await self._publish(
                 ASSISTANT_ACTIVATION_FINISHED,
@@ -205,6 +223,50 @@ class ActivationCoordinator:
             async with self._lock:
                 self._active = False
                 self._task = None
+
+    def _should_launch_workspace(self) -> bool:
+        return (
+            self._workspace is not None
+            and self._settings.workspace_enabled
+            and self._settings.workspace_start_after_welcome
+        )
+
+    async def _run_workspace_sequence(self) -> None:
+        """Launch the default workspace after the welcome speech finishes.
+
+        The microphone stays paused for the entire duration of this method —
+        callers only resume listening after it returns. Failures (including a
+        conflicting run already in progress) are published as warnings/errors
+        but never prevent the microphone from resuming afterwards.
+        """
+        assert self._state_manager is not None
+        assert self._workspace is not None
+        try:
+            logger.info("Starting workspace launch after welcome sequence")
+            await self._publish(ASSISTANT_WORKSPACE_INITIALIZATION_STARTED, {})
+            await self._state_manager.set_state(AssistantState.INITIALIZING_WORKSPACE)
+            await self._state_manager.set_state(AssistantState.OPENING_APPLICATIONS)
+
+            status = await self._workspace.start_default_workspace()
+
+            if status.status in {
+                WorkspaceServiceStatus.READY,
+                WorkspaceServiceStatus.PARTIAL_SUCCESS,
+            }:
+                await self._state_manager.set_state(AssistantState.READY)
+                await self._publish(ASSISTANT_WORKSPACE_READY, {"status": status.status.value})
+                display_s = self._settings.workspace_ready_display_ms / 1000.0
+                if display_s > 0:
+                    await asyncio.sleep(display_s)
+            else:
+                message = status.last_error or f"Workspace finished with status {status.status.value}"
+                logger.warning("Workspace launch did not complete successfully: %s", message)
+                await self._publish(WORKSPACE_ERROR, {"message": message})
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.exception("Workspace launch failed during activation")
+            await self._publish(WORKSPACE_ERROR, {"message": str(exc)})
 
     async def _safe_resume_listening(self, *, return_idle: bool) -> None:
         if self._tts is not None:

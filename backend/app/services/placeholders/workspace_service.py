@@ -1,27 +1,15 @@
-"""Placeholder workspace service for later phases.
+"""Backward-compatible re-export.
 
-Future responsibility:
-- Launch and focus Windows applications (VS Code, Chrome, Teams, etc.)
-- Open web destinations (Gmail, news dashboard)
-- Coordinate the "initialize workspace" sequence after wake
-
-Phase 1 does not automate or launch any applications.
+Phase 4 implements the real workspace-launching service under
+``app.services.workspace``. This module is kept so any existing imports of
+``app.services.placeholders.workspace_service.WorkspaceService`` keep working.
 """
 
 from __future__ import annotations
 
+from app.services.workspace.workspace_service import (
+    WorkspaceRunConflictError,
+    WorkspaceService,
+)
 
-class WorkspaceService:
-    """Scaffold for Windows application / workspace control."""
-
-    def initialize_workspace(self) -> None:
-        """Run the full workspace initialization sequence."""
-        raise NotImplementedError(
-            "Workspace initialization will be implemented in a later phase."
-        )
-
-    def open_application(self, app_name: str) -> None:
-        """Open or focus a configured application by name."""
-        raise NotImplementedError(
-            f"Application control is not available in Phase 1 (app={app_name!r})."
-        )
+__all__ = ["WorkspaceService", "WorkspaceRunConflictError"]

@@ -46,8 +46,9 @@
 - Only `VoiceService` opens the input stream
 - Never open a second capture stream for the same session
 - Device changes must stop the current stream before opening another
-- TTS coordinates via `pause_listening` / `resume_listening` (Phase 3)
-- `ActivationCoordinator` owns the full wake → speech → resume state machine
+- TTS and workspace coordinate via `pause_listening` / `resume_listening`
+- `ActivationCoordinator` owns the full wake → speech → workspace → resume state machine
+- Microphone must not resume immediately after TTS when workspace launch is enabled
 
 ## Piper / TTS rules
 
@@ -55,10 +56,71 @@
 - Do not auto-download voices at backend startup
 - Delete temporary WAVs when `TTS_DELETE_TEMP_AUDIO=true`
 - Reject overlapping welcome sequences
-- Always attempt to resume the microphone after speech, cancel, or error
+- Always attempt to resume the microphone after speech, workspace, cancel, or error
 - Test TTS without hardware using fake engine/player injection
 
-## Logging and privacy rules
+## Workspace / application launch rules
+
+### Adding an approved application
+
+1. Add a definition to `backend/config/applications.json` (stable `id`, `launch_type`, process names, order)
+2. Prefer PATH / common-path discovery over machine-specific committed paths
+3. Put explicit executable overrides in `.env` (`VSCODE_EXECUTABLE_PATH`, etc.)
+4. Validate through `AppRegistry` / Pydantic — reject unknown launch types
+5. Add unit tests with fakes; do not launch real apps in pytest
+
+### Launch-type rules
+
+- `executable` — trusted resolved path or approved candidate command
+- `url` — HTTPS in the default browser
+- `browser_url` — HTTPS through configured Chrome
+- `uri` — allow-listed protocol such as `spotify:` defined in config, not free-form UI input
+- `start_app` — discovered AppUserModelID / Start App entry
+
+### Executable resolution order
+
+1. Explicit configured / env override path
+2. Approved PATH candidates
+3. Windows App Paths when practical
+4. Common install locations via `LOCALAPPDATA` / `PROGRAMFILES` / `PROGRAMFILES(X86)`
+
+Do not scan the whole drive. Do not execute during discovery.
+
+### Window matching rules
+
+- Match by approved process IDs + optional title patterns
+- Ignore empty-title and invisible windows
+- Restore minimized windows with `ShowWindow(SW_RESTORE)`
+- Best-effort `SetForegroundWindow`; focus denial is limited success when running
+- Never close or kill user applications in Phase 4
+
+### Safe subprocess rules
+
+- Always `shell=False`
+- Argument lists only from verified definitions
+- Fixed PowerShell argv for Start App discovery — no user interpolation
+- Timeouts on discovery and startup waits
+
+### URL validation rules
+
+- Allow `https://` by default
+- Optionally allow `http://localhost` / `127.0.0.1` in development
+- Reject `javascript:`, `data:`, `file:`, credentials in URLs, and non-allow-listed protocols
+
+### Testing without launching applications
+
+- Inject fake process / window / Start App / browser dependencies
+- Use temporary `applications.json` files
+- Keep `WORKSPACE_START_AFTER_WELCOME=false` in pytest conftest so unit tests stay isolated
+- Manual live launch: `.\scripts\test-workspace.ps1` (Windows only)
+
+### Logging and privacy
+
+Log: registry load, resolution results, run start/finish, per-app status, focus request outcome, cancellation, shutdown.
+
+Do **not** log: window titles (unless debug), browser cookies, Gmail/Teams/WhatsApp content, email subjects, message text, or raw command lines.
+
+## Logging and privacy rules (voice)
 
 Log: init, model load, selected mic, start/stop, wake detection + confidence, cooldown rejects, device changes, queue overflows, errors, shutdown.
 
@@ -80,7 +142,7 @@ Do not store microphone recordings.
 1. Create `frontend/src/pages/YourPage.tsx` (+ CSS module)
 2. Register a route in `App.tsx`
 3. Add a nav item in `DashboardLayout` / `NavigationDots`
-4. Reuse `MetricCard`, `StatusBadge`, and connection / voice hooks from the shared layout
+4. Reuse `MetricCard`, `StatusBadge`, and connection / voice / workspace hooks from the shared layout
 5. Mark unfinished sections with “Available in a later phase”
 
 ## Running tests
@@ -117,11 +179,23 @@ cd scripts
 .\test-tts.ps1
 ```
 
+Manual workspace (Windows + installed apps):
+
+```powershell
+cd scripts
+.\test-workspace.ps1 -List
+.\test-workspace.ps1 -Status
+.\test-workspace.ps1 -AppId vscode
+.\test-workspace.ps1
+.\test-workspace.ps1 -NoFocus
+```
+
 ## Logging expectations
 
 - Startup and shutdown must appear in the terminal and `backend/logs/jarvis.log`
 - Log WebSocket connect / disconnect
 - Log every assistant state transition
 - Log voice start / stop / wake / errors
+- Log workspace run start / per-app results / finish / cancel
 - Log API client errors at warning level
 - Log unexpected exceptions with stack traces on the server only — never return stack traces to the frontend

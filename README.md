@@ -1,8 +1,8 @@
 # Jarvis Workspace
 
-Local Windows desktop assistant. Phase 1 delivered the FastAPI + React foundation. Phase 2 added offline wake-phrase detection. **Phase 3** adds offline British male text-to-speech (Piper) and the fixed welcome sequence after “Wake up, Jarvis.”
+Local Windows desktop assistant. Phase 1 delivered the FastAPI + React foundation. Phase 2 added offline wake-phrase detection. Phase 3 added offline British male text-to-speech (Piper). **Phase 4** opens and restores the configured Windows workspace applications after the welcome sequence.
 
-**Phase 3 does not include** application launching, email, calendar, news, Ollama, unrestricted voice commands, Windows startup packaging, or advanced cinematic dashboard animations.
+**Phase 4 does not include** advanced cinematic dashboard graphs, live window previews, calendar, email unread counts, news summarisation, Ollama, unrestricted voice commands, or Windows startup packaging.
 
 ## Prerequisites
 
@@ -14,6 +14,7 @@ Local Windows desktop assistant. Phase 1 delivered the FastAPI + React foundatio
 - Speakers or headphones (for welcome speech)
 - A manually downloaded small English Vosk model (see below)
 - Piper for Windows + `en_GB-alan-medium` voice files (see Phase 3)
+- Optional: VS Code, Chrome, Teams, WhatsApp, Spotify installed for live workspace tests
 
 ## Setup (PowerShell)
 
@@ -52,7 +53,13 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 pip install -r requirements-dev.txt
 ```
 
-Phase 2 adds `vosk`, `sounddevice`, and `numpy`. PortAudio is bundled with the `sounddevice` wheels on Windows in typical installs.
+Phase 2 adds `vosk`, `sounddevice`, and `numpy`. Phase 4 adds `pywin32` (Windows only). PortAudio is bundled with the `sounddevice` wheels on Windows in typical installs.
+
+If `import win32gui` fails after install, run:
+
+```powershell
+python -m pywin32_postinstall -install
+```
 
 ### 5. Install the Vosk model (required for listening)
 
@@ -93,17 +100,25 @@ cd ..\frontend
 Copy-Item .env.example .env
 ```
 
-Important Phase 2 keys in `backend/.env`:
+Important Phase 4 keys in `backend/.env`:
 
 ```env
-VOICE_ENABLED=true
-VOICE_START_AUTOMATICALLY=true
-WAKE_PHRASE=Wake up Jarvis
-VOSK_MODEL_PATH=models/vosk-model-small-en-us
-VOICE_DEVICE_ID=
-WAKE_CONFIDENCE_THRESHOLD=0.65
-WAKE_COOLDOWN_SECONDS=4
-ENVIRONMENT=development
+WORKSPACE_ENABLED=true
+WORKSPACE_START_AFTER_WELCOME=true
+WORKSPACE_CONFIG_PATH=config/applications.json
+GMAIL_URL=https://mail.google.com/
+NEWS_URL=https://news.google.com/
+VSCODE_EXECUTABLE_PATH=
+CHROME_EXECUTABLE_PATH=
+TEAMS_EXECUTABLE_PATH=
+WHATSAPP_EXECUTABLE_PATH=
+SPOTIFY_EXECUTABLE_PATH=
+```
+
+Application definitions (no machine-specific paths in the committed defaults):
+
+```text
+backend/config/applications.json
 ```
 
 ### 8. Start both using the development script
@@ -119,8 +134,93 @@ Or start separately with `.\start-backend.ps1` and `.\start-frontend.ps1`.
 
 - Dashboard: http://localhost:5173
 - Health API: http://127.0.0.1:8765/api/health
-- Voice status: http://127.0.0.1:8765/api/voice/status
+- Workspace status: http://127.0.0.1:8765/api/workspace/status
 - WebSocket: ws://127.0.0.1:8765/ws
+
+## Phase 4 — Windows workspace launching
+
+### How executable discovery works
+
+For each approved application, Jarvis resolves launch targets in this order:
+
+1. Explicit path from `.env` / config override
+2. Approved command on `PATH` (for example `code.cmd`)
+3. Windows App Paths when practical
+4. Common install folders via `LOCALAPPDATA`, `PROGRAMFILES`, `PROGRAMFILES(X86)`
+
+Discovery does not execute applications and does not scan the whole drive.
+
+### List windows
+
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+python tools\list_windows.py
+python tools\list_windows.py --include-titles
+```
+
+Titles are omitted by default (privacy).
+
+### List Start Apps
+
+```powershell
+python tools\list_start_apps.py
+python tools\list_start_apps.py --filter teams
+python tools\list_start_apps.py --filter whatsapp
+```
+
+### Test one application
+
+```powershell
+cd scripts
+.\test-workspace.ps1 -AppId vscode
+.\test-workspace.ps1 -AppId chrome
+.\test-workspace.ps1 -AppId gmail
+```
+
+### Test the full workspace
+
+```powershell
+.\test-workspace.ps1
+.\test-workspace.ps1 -NoFocus
+.\test-workspace.ps1 -List
+.\test-workspace.ps1 -Status
+```
+
+Ctrl+C cancels remaining launches without killing already-opened apps.
+
+### Dashboard controls
+
+- Home **Workspace** panel: start, cancel, refresh, live per-app progress
+- Applications page: Open / Focus / status cards for configured apps
+- Settings: enable/order/URL visibility (safe edits only; no arbitrary commands)
+- System page: workspace controller / registry / process / window / app rows
+
+### Configuring apps
+
+| App | Config |
+| --- | --- |
+| VS Code | `VSCODE_EXECUTABLE_PATH` or PATH `code` / common install paths |
+| Chrome | `CHROME_EXECUTABLE_PATH` or common install paths |
+| Gmail | `GMAIL_URL` (HTTPS) opened via Chrome; session dedupe avoids repeat opens |
+| Teams | `TEAMS_EXECUTABLE_PATH` or discovered Start App |
+| WhatsApp | `WHATSAPP_EXECUTABLE_PATH` or Start App / optional Web fallback in config |
+| Spotify | `SPOTIFY_EXECUTABLE_PATH`, `spotify:` URI, or Start App |
+| News | `NEWS_URL` (HTTPS) opened via Chrome |
+
+Jarvis does **not** read Gmail, Teams, WhatsApp, or news content. No API key or paid service is required.
+
+### Workspace troubleshooting
+
+| Issue | What to do |
+| --- | --- |
+| Executable not found | Set the matching `*_EXECUTABLE_PATH` in `.env`; verify with `-Status` |
+| Teams Store install | Use `list_start_apps.py --filter teams`; Start App launch must be enabled |
+| WhatsApp Store install | Same pattern with `--filter whatsapp` |
+| Spotify URI | Ensure Spotify is installed and `spotify:` is registered; try executable path |
+| Foreground denied | Expected on Windows; app still counts as running / restored |
+| Chrome tab duplication | Same activation session dedupes Gmail/news URLs; exact tab focus needs a later extension |
+| pywin32 import errors | Reinstall `pywin32` and run `python -m pywin32_postinstall -install` |
 
 ## Phase 2 — wake phrase
 
@@ -155,16 +255,15 @@ Device IDs can change after Windows restarts; prefer re-listing devices.
 ### Test “Wake up, Jarvis.”
 
 1. Ensure Vosk model + microphone permissions are OK
-2. Optionally install Piper + `en_GB-alan-medium` (Phase 3) for spoken welcome
-3. Start the app or run `.\scripts\test-wake-listener.ps1`
-4. Say clearly: **Wake up, Jarvis.**
-5. Expect:
-   - Dashboard banner: **VOICE ACTIVATION CONFIRMED**
-   - Assistant state: `LISTENING` → `PROCESSING` → `SPEAKING` → `LISTENING` (with Piper)
-   - Three welcome sentences spoken in order (with Piper)
-6. Applications are **not** opened in Phase 3
-
-Accepted wake variants include punctuation/case differences and `wakeup jarvis` if Vosk merges the tokens.
+2. Install Piper + `en_GB-alan-medium` for spoken welcome
+3. Ensure `WORKSPACE_ENABLED=true` and `WORKSPACE_START_AFTER_WELCOME=true`
+4. Start the app or run `.\scripts\test-wake-listener.ps1`
+5. Say clearly: **Wake up, Jarvis.**
+6. Expect:
+   - Welcome speech (three lines)
+   - Assistant: `PROCESSING` → `SPEAKING` → `INITIALIZING_WORKSPACE` → `OPENING_APPLICATIONS` → `READY` → `LISTENING`
+   - Dashboard workspace progress for each configured app
+   - Microphone resumes only after workspace finishes
 
 ### Test unrelated phrases
 
@@ -182,6 +281,8 @@ With `ENVIRONMENT=development`:
 Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8765/api/voice/test-activation
 # Or full welcome via coordinator:
 Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8765/api/tts/test-welcome
+# Manual workspace without TTS:
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8765/api/workspace/start
 ```
 
 ## Phase 3 — British male TTS (Piper)
@@ -283,12 +384,13 @@ npm run build
 
 ## Project layout
 
-- `backend/` — FastAPI app, StateManager, WebSocket, voice + TTS services
+- `backend/` — FastAPI app, StateManager, WebSocket, voice + TTS + workspace services
+- `backend/config/applications.json` — approved workspace application registry
 - `backend/models/` — Vosk model install location (binaries not committed)
 - `backend/voices/` — Piper voice install location (binaries not committed)
-- `backend/tools/` — `test_wake_phrase.py`, `test_tts.py`
+- `backend/tools/` — `test_wake_phrase.py`, `test_tts.py`, `list_windows.py`, `list_start_apps.py`, `test_workspace.py`
 - `frontend/` — React dashboard
-- `scripts/` — PowerShell helpers including `test-wake-listener.ps1`, `test-tts.ps1`
+- `scripts/` — PowerShell helpers including workspace / wake / TTS testers
 - `docs/` — Architecture, development, and phase roadmap
 
 ## Documentation

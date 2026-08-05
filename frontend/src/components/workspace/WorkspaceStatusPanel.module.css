@@ -1,0 +1,179 @@
+.panel {
+  padding: 1.1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.header h2 {
+  font-size: 0.95rem;
+  color: var(--cyan);
+  letter-spacing: 0.08em;
+}
+
+.banner {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  padding: 0;
+  height: 0;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  font-family: var(--font-display);
+  letter-spacing: 0.2em;
+  font-size: clamp(0.72rem, 2vw, 0.88rem);
+  color: var(--cyan);
+  transition: opacity 0.35s ease, transform 0.35s ease, border-color 0.35s ease, height 0.35s ease, padding 0.35s ease;
+  background: linear-gradient(
+    90deg,
+    rgba(79, 210, 255, 0.05),
+    rgba(79, 210, 255, 0.18),
+    rgba(79, 210, 255, 0.05)
+  );
+}
+
+.bannerVisible {
+  height: auto;
+  padding: 0.7rem 1rem;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-glow);
+}
+
+.bannerReady {
+  color: var(--success);
+  background: linear-gradient(
+    90deg,
+    rgba(77, 255, 181, 0.05),
+    rgba(77, 255, 181, 0.18),
+    rgba(77, 255, 181, 0.05)
+  );
+}
+
+.bannerPartial {
+  color: var(--warning);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 200, 87, 0.05),
+    rgba(255, 200, 87, 0.18),
+    rgba(255, 200, 87, 0.05)
+  );
+}
+
+.live {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem 1rem;
+  margin: 0;
+}
+
+.meta dt {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.meta dd {
+  margin: 0.2rem 0 0;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.progressBar {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(90, 180, 220, 0.12);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan-dim), var(--cyan));
+  transition: width 0.4s ease;
+}
+
+.progressLabel {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-align: right;
+}
+
+.error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.85rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.button,
+.buttonSecondary {
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  padding: 0.55rem 0.9rem;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.button {
+  background: rgba(79, 210, 255, 0.16);
+  color: var(--text-primary);
+}
+
+.buttonSecondary {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border-subtle);
+}
+
+.button:disabled,
+.buttonSecondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.appList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner,
+  .progressFill {
+    transition: none;
+  }
+}

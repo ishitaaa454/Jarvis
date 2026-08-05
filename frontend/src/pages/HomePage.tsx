@@ -7,12 +7,15 @@ import { StatusBadge } from '../components/common/StatusBadge';
 import { WelcomeSequencePanel } from '../components/speech/WelcomeSequencePanel';
 import { VoiceActivationBanner } from '../components/voice/VoiceActivationBanner';
 import { WakeListenerPanel } from '../components/voice/WakeListenerPanel';
+import { WorkspaceStatusPanel } from '../components/workspace/WorkspaceStatusPanel';
 import { environment } from '../config/environment';
+import type { WorkspaceBanner } from '../hooks/useWorkspaceStatus';
 import { fetchHealth } from '../services/api';
 import type { ConnectionStatus } from '../types/assistant';
 import type { ActivityEntry } from '../types/messages';
 import type { TtsStatus, UtteranceProgress } from '../types/speech';
 import type { VoiceStatus } from '../types/voice';
+import type { ApplicationRuntimeStatus, WorkspaceStatus } from '../types/workspace';
 import styles from './HomePage.module.css';
 
 interface HomePageProps {
@@ -37,6 +40,19 @@ interface HomePageProps {
   onTestWelcome: () => void;
   onCancelSpeech: () => void;
   onRetryTts: () => void;
+  workspaceStatus: WorkspaceStatus | null;
+  workspaceApplications: ApplicationRuntimeStatus[];
+  workspaceLoading: boolean;
+  workspaceError: string | null;
+  workspacePending: boolean;
+  workspacePendingAppIds: Set<string>;
+  workspaceBanner: WorkspaceBanner;
+  workspaceRunning: boolean;
+  onStartWorkspace: () => void;
+  onCancelWorkspace: () => void;
+  onRefreshWorkspace: () => void;
+  onOpenWorkspaceApp: (appId: string) => void;
+  onFocusWorkspaceApp: (appId: string) => void;
 }
 
 export function HomePage({
@@ -61,6 +77,19 @@ export function HomePage({
   onTestWelcome,
   onCancelSpeech,
   onRetryTts,
+  workspaceStatus,
+  workspaceApplications,
+  workspaceLoading,
+  workspaceError,
+  workspacePending,
+  workspacePendingAppIds,
+  workspaceBanner,
+  workspaceRunning,
+  onStartWorkspace,
+  onCancelWorkspace,
+  onRefreshWorkspace,
+  onOpenWorkspaceApp,
+  onFocusWorkspaceApp,
 }: HomePageProps) {
   const [now, setNow] = useState(() => new Date());
   const [cpu, setCpu] = useState<number | null>(null);
@@ -151,6 +180,22 @@ export function HomePage({
         onTestWelcome={onTestWelcome}
         onCancel={onCancelSpeech}
         onRetry={onRetryTts}
+      />
+
+      <WorkspaceStatusPanel
+        workspaceStatus={workspaceStatus}
+        applications={workspaceApplications}
+        loading={workspaceLoading}
+        error={workspaceError}
+        pending={workspacePending}
+        pendingAppIds={workspacePendingAppIds}
+        banner={workspaceBanner}
+        isRunning={workspaceRunning}
+        onStart={onStartWorkspace}
+        onCancel={onCancelWorkspace}
+        onRefresh={onRefreshWorkspace}
+        onOpenApp={onOpenWorkspaceApp}
+        onFocusApp={onFocusWorkspaceApp}
       />
 
       <section className={styles.metrics}>

@@ -11,6 +11,8 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.core.events import (
     ASSISTANT_ACTIVATION_FINISHED,
     ASSISTANT_ACTIVATION_STARTED,
+    ASSISTANT_WORKSPACE_INITIALIZATION_STARTED,
+    ASSISTANT_WORKSPACE_READY,
     STATE_CHANGED,
     TTS_ERROR,
     TTS_SEQUENCE_CANCELLED,
@@ -22,14 +24,24 @@ from app.core.events import (
     VOICE_ERROR,
     VOICE_STATUS_CHANGED,
     VOICE_WAKE_DETECTED,
+    WORKSPACE_APPLICATION_RESULT,
+    WORKSPACE_APPLICATION_STATUS,
+    WORKSPACE_ERROR,
+    WORKSPACE_RUN_CANCELLED,
+    WORKSPACE_RUN_FINISHED,
+    WORKSPACE_RUN_STARTED,
+    WORKSPACE_STATUS_CHANGED,
+    WORKSPACE_WARNING,
     EventBus,
 )
 from app.core.state_manager import StateManager
+from app.models.application import workspace_status_to_ws_payload
 from app.models.tts import tts_status_to_ws_payload
 from app.models.voice import voice_status_to_ws_payload
 from app.models.websocket_message import WebSocketMessage
 from app.services.tts.tts_service import TtsService
 from app.services.voice.voice_service import VoiceService
+from app.services.workspace.workspace_service import WorkspaceService
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +125,24 @@ def create_tts_event_handlers(manager: ConnectionManager) -> list[tuple[str, Any
     ]
 
 
+def create_workspace_event_handlers(manager: ConnectionManager) -> list[tuple[str, Any]]:
+    return [
+        (WORKSPACE_STATUS_CHANGED, _mirror(manager, WORKSPACE_STATUS_CHANGED)),
+        (WORKSPACE_RUN_STARTED, _mirror(manager, WORKSPACE_RUN_STARTED)),
+        (WORKSPACE_APPLICATION_STATUS, _mirror(manager, WORKSPACE_APPLICATION_STATUS)),
+        (WORKSPACE_APPLICATION_RESULT, _mirror(manager, WORKSPACE_APPLICATION_RESULT)),
+        (WORKSPACE_RUN_FINISHED, _mirror(manager, WORKSPACE_RUN_FINISHED)),
+        (WORKSPACE_RUN_CANCELLED, _mirror(manager, WORKSPACE_RUN_CANCELLED)),
+        (WORKSPACE_WARNING, _mirror(manager, WORKSPACE_WARNING)),
+        (WORKSPACE_ERROR, _mirror(manager, WORKSPACE_ERROR)),
+        (
+            ASSISTANT_WORKSPACE_INITIALIZATION_STARTED,
+            _mirror(manager, ASSISTANT_WORKSPACE_INITIALIZATION_STARTED),
+        ),
+        (ASSISTANT_WORKSPACE_READY, _mirror(manager, ASSISTANT_WORKSPACE_READY)),
+    ]
+
+
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
     """Accept a dashboard client and stream connection, state, voice, and TTS events."""
@@ -121,6 +151,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     state_manager: StateManager = app.state.state_manager
     voice_service: VoiceService = app.state.voice_service
     tts_service: TtsService = app.state.tts_service
+    workspace_service: WorkspaceService = app.state.workspace_service
 
     await manager.connect(websocket)
 
@@ -161,6 +192,14 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         ).to_dict(),
     )
 
+    await manager.send_json(
+        websocket,
+        WebSocketMessage(
+            type=WORKSPACE_STATUS_CHANGED,
+            payload=workspace_status_to_ws_payload(workspace_service.get_status()),
+        ).to_dict(),
+    )
+
     try:
         while True:
             await websocket.receive_text()
@@ -186,6 +225,10 @@ async def register_websocket_broadcasts(
         handlers.append(handler)
 
     for event_type, handler in create_tts_event_handlers(manager):
+        await event_bus.subscribe(event_type, handler)
+        handlers.append(handler)
+
+    for event_type, handler in create_workspace_event_handlers(manager):
         await event_bus.subscribe(event_type, handler)
         handlers.append(handler)
 

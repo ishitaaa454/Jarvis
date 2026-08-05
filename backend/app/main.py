@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api import health, tts, voice, websocket
+from app.api import workspace as workspace_api
 from app.api.websocket import ConnectionManager, register_websocket_broadcasts
 from app.core.config import get_settings
 from app.core.events import EventBus
@@ -21,10 +22,10 @@ from app.core.state_manager import StateManager
 from app.models.assistant_state import AssistantState
 from app.services.assistant import ActivationCoordinator
 from app.services.placeholders.integration_service import IntegrationService
-from app.services.placeholders.workspace_service import WorkspaceService
 from app.services.system_service import SystemService
 from app.services.tts import TtsService
 from app.services.voice import VoiceService
+from app.services.workspace import WorkspaceService
 
 logger = logging.getLogger(__name__)
 
@@ -53,15 +54,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     state_manager: StateManager = app.state.state_manager
     voice_service: VoiceService = app.state.voice_service
     tts_service: TtsService = app.state.tts_service
+    workspace_service: WorkspaceService = app.state.workspace_service
     coordinator: ActivationCoordinator = app.state.activation_coordinator
 
     voice_service.bind(state_manager=state_manager, event_bus=app.state.event_bus)
     tts_service.bind(event_bus=app.state.event_bus)
+    workspace_service.bind(event_bus=app.state.event_bus)
     coordinator.bind(
         state_manager=state_manager,
         event_bus=app.state.event_bus,
         voice_service=voice_service,
         tts_service=tts_service,
+        workspace_service=workspace_service,
     )
 
     await state_manager.set_state(AssistantState.STARTING)
@@ -79,6 +83,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger.exception("Voice service startup failed — continuing without listener")
 
     try:
+        await workspace_service.on_startup()
+    except Exception:
+        logger.exception("Workspace service startup failed — continuing without workspace launch")
+
+    try:
         await coordinator.start()
     except Exception:
         logger.exception("ActivationCoordinator failed to start")
@@ -90,6 +99,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await coordinator.stop()
     except Exception:
         logger.exception("ActivationCoordinator shutdown failed")
+
+    try:
+        await workspace_service.cancel()
+    except Exception:
+        logger.exception("Workspace service cancellation failed")
 
     try:
         await tts_service.shutdown()
@@ -123,6 +137,7 @@ def create_app() -> FastAPI:
     connection_manager = ConnectionManager()
     voice_service = VoiceService(settings=settings)
     tts_service = TtsService(settings=settings, event_bus=event_bus)
+    workspace_service = WorkspaceService(settings=settings, event_bus=event_bus)
     coordinator = ActivationCoordinator(settings=settings)
 
     app.state.event_bus = event_bus
@@ -132,7 +147,7 @@ def create_app() -> FastAPI:
     app.state.voice_service = voice_service
     app.state.tts_service = tts_service
     app.state.activation_coordinator = coordinator
-    app.state.workspace_service = WorkspaceService()
+    app.state.workspace_service = workspace_service
     app.state.integration_service = IntegrationService()
     app.state.state_broadcast_handler = None
 
@@ -147,6 +162,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(voice.router)
     app.include_router(tts.router)
+    app.include_router(workspace_api.router)
     app.include_router(websocket.router)
 
     @app.exception_handler(StarletteHTTPException)
