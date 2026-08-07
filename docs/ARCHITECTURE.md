@@ -292,3 +292,25 @@ Static drive/adapter detail is served primarily via REST (`/api/system-monitor/*
 ### Frontend reconciliation
 
 `useSystemMonitor` owns snapshot, capabilities, process list, and bounded series. WebSocket updates prefer newer timestamps; reconnect re-fetches REST status/snapshot/capabilities. Charts are lightweight SVG and never invent missing samples.
+
+## Phase 7 command centre architecture
+
+### WindowInventoryService
+
+Enumerates top-level windows for approved applications only, assigns opaque `win_*` IDs (HWND stays backend-only), applies SAFE title privacy, and publishes `windows.inventory_changed` when the fingerprint changes.
+
+### WindowSwitcher / RecentWindowTracker
+
+Focus/restore via opaque IDs with `RUNNING_FOCUS_LIMITED` when Windows denies foreground. Recent list is in-memory (bounded), Jarvis-observed only.
+
+### GlobalHotkeyService
+
+Win32 `RegisterHotKey` on a dedicated message thread for approved combos only (`CTRL+ALT+J` default). No keylogging. Unregisters on shutdown.
+
+### BrowserIntegrationService
+
+Session tracking of Jarvis-opened destinations (dashboard/gmail/news). Optional CDP provider is loopback-only, filters to approved URLs, never requests cookies or executes page JavaScript.
+
+### Previews
+
+`WindowPreviewProvider` uses PrintWindow + optional Pillow when enabled; never desktop capture; sensitive apps blocked by default; JPEG delivered with no-store headers.

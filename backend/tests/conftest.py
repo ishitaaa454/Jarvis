@@ -24,6 +24,11 @@ os.environ.setdefault("SYSTEM_MONITOR_START_AUTOMATICALLY", "false")
 os.environ.setdefault("NVIDIA_NVML_ENABLED", "false")
 os.environ.setdefault("TEMPERATURE_MONITOR_ENABLED", "true")
 os.environ.setdefault("LIBRE_HARDWARE_MONITOR_ENABLED", "false")
+os.environ.setdefault("WINDOW_INVENTORY_ENABLED", "false")
+os.environ.setdefault("GLOBAL_HOTKEY_ENABLED", "false")
+os.environ.setdefault("BROWSER_INTEGRATION_ENABLED", "true")
+os.environ.setdefault("BROWSER_CDP_ENABLED", "false")
+os.environ.setdefault("WINDOW_PREVIEWS_ENABLED", "false")
 
 
 @pytest.fixture(autouse=True)

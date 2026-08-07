@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
+
+import asyncio
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -12,7 +14,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api import health, tts, voice, websocket
+from app.api import browser as browser_api
+from app.api import health, hotkeys, tts, voice, websocket, windows
 from app.api import system_monitor as system_monitor_api
 from app.api import workspace as workspace_api
 from app.api.websocket import ConnectionManager, register_websocket_broadcasts
@@ -22,11 +25,16 @@ from app.core.logging_config import setup_logging
 from app.core.state_manager import StateManager
 from app.models.assistant_state import AssistantState
 from app.services.assistant import ActivationCoordinator
+from app.services.browser import BrowserIntegrationService
+from app.services.hotkeys import GlobalHotkeyService
 from app.services.placeholders.integration_service import IntegrationService
 from app.services.system_monitor import SystemMonitorService
 from app.services.system_service import SystemService
 from app.services.tts import TtsService
 from app.services.voice import VoiceService
+from app.services.windows import WindowInventoryService
+from app.services.windows.opaque_ids import OpaqueWindowIdStore
+from app.services.windows.window_preview_provider import WindowPreviewProvider
 from app.services.workspace import WorkspaceService
 
 logger = logging.getLogger(__name__)
@@ -58,12 +66,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     tts_service: TtsService = app.state.tts_service
     workspace_service: WorkspaceService = app.state.workspace_service
     system_monitor: SystemMonitorService = app.state.system_monitor_service
+    window_inventory: WindowInventoryService = app.state.window_inventory_service
+    browser_service: BrowserIntegrationService = app.state.browser_integration_service
+    hotkey_service: GlobalHotkeyService = app.state.global_hotkey_service
     coordinator: ActivationCoordinator = app.state.activation_coordinator
 
     voice_service.bind(state_manager=state_manager, event_bus=app.state.event_bus)
     tts_service.bind(event_bus=app.state.event_bus)
     workspace_service.bind(event_bus=app.state.event_bus)
     system_monitor.bind(app.state.event_bus)
+    window_inventory.bind(app.state.event_bus)
+    browser_service.bind(app.state.event_bus)
+    hotkey_service.bind(app.state.event_bus)
     coordinator.bind(
         state_manager=state_manager,
         event_bus=app.state.event_bus,
@@ -72,9 +86,44 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         workspace_service=workspace_service,
     )
 
+    window_inventory.set_app_resolver(lambda: workspace_service.list_application_definitions())
+
+    def _launch_chrome_url(url: str) -> None:
+        try:
+            workspace_service.open_url_via_chrome(url)
+        except Exception:
+            logger.debug("Chrome URL launch via workspace failed", exc_info=True)
+
+    browser_service.set_chrome_launcher(_launch_chrome_url)
+
+    # Hotkey callback runs on the Win32 thread — schedule coroutine on the loop.
+    loop_holder: dict[str, Any] = {}
+
+    def _show_dashboard() -> None:
+        loop = loop_holder.get("loop")
+        if loop is None:
+            return
+
+        async def _run() -> None:
+            try:
+                await browser_service.open_destination("dashboard")
+            except Exception:
+                logger.debug("Dashboard open failed", exc_info=True)
+            try:
+                await workspace_service.focus_application("chrome")
+            except Exception:
+                logger.debug("Chrome focus after hotkey failed", exc_info=True)
+
+        loop.call_soon_threadsafe(lambda: asyncio.create_task(_run()))
+
+    hotkey_service.set_show_dashboard_handler(_show_dashboard)
+    browser_service.set_focus_chrome(lambda: False)
+
     await state_manager.set_state(AssistantState.STARTING)
     await state_manager.set_state(AssistantState.IDLE)
     logger.info("Backend ready (state=IDLE)")
+
+    loop_holder["loop"] = asyncio.get_running_loop()
 
     try:
         await tts_service.on_startup()
@@ -97,6 +146,21 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger.exception("System monitor startup failed — continuing without monitoring")
 
     try:
+        await window_inventory.on_startup()
+    except Exception:
+        logger.exception("Window inventory startup failed")
+
+    try:
+        await browser_service.on_startup()
+    except Exception:
+        logger.exception("Browser integration startup failed")
+
+    try:
+        await hotkey_service.on_startup()
+    except Exception:
+        logger.exception("Global hotkey startup failed")
+
+    try:
         await coordinator.start()
     except Exception:
         logger.exception("ActivationCoordinator failed to start")
@@ -108,6 +172,21 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await coordinator.stop()
     except Exception:
         logger.exception("ActivationCoordinator shutdown failed")
+
+    try:
+        await hotkey_service.shutdown()
+    except Exception:
+        logger.exception("Hotkey shutdown failed")
+
+    try:
+        await browser_service.shutdown()
+    except Exception:
+        logger.exception("Browser integration shutdown failed")
+
+    try:
+        await window_inventory.shutdown()
+    except Exception:
+        logger.exception("Window inventory shutdown failed")
 
     try:
         await system_monitor.shutdown()
@@ -153,6 +232,15 @@ def create_app() -> FastAPI:
     tts_service = TtsService(settings=settings, event_bus=event_bus)
     workspace_service = WorkspaceService(settings=settings, event_bus=event_bus)
     system_monitor = SystemMonitorService(settings=settings, event_bus=event_bus)
+    window_store = OpaqueWindowIdStore()
+    window_inventory = WindowInventoryService(
+        settings=settings,
+        event_bus=event_bus,
+        store=window_store,
+    )
+    preview_provider = WindowPreviewProvider(settings=settings, store=window_store)
+    browser_service = BrowserIntegrationService(settings=settings, event_bus=event_bus)
+    hotkey_service = GlobalHotkeyService(settings=settings, event_bus=event_bus)
     coordinator = ActivationCoordinator(settings=settings)
 
     app.state.event_bus = event_bus
@@ -160,6 +248,10 @@ def create_app() -> FastAPI:
     app.state.connection_manager = connection_manager
     app.state.system_service = SystemService()
     app.state.system_monitor_service = system_monitor
+    app.state.window_inventory_service = window_inventory
+    app.state.window_preview_provider = preview_provider
+    app.state.browser_integration_service = browser_service
+    app.state.global_hotkey_service = hotkey_service
     app.state.voice_service = voice_service
     app.state.tts_service = tts_service
     app.state.activation_coordinator = coordinator
@@ -180,6 +272,9 @@ def create_app() -> FastAPI:
     app.include_router(tts.router)
     app.include_router(workspace_api.router)
     app.include_router(system_monitor_api.router)
+    app.include_router(windows.router)
+    app.include_router(hotkeys.router)
+    app.include_router(browser_api.router)
     app.include_router(websocket.router)
 
     @app.exception_handler(StarletteHTTPException)

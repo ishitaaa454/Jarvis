@@ -18,6 +18,7 @@ export function CorePanel() {
     speech,
     workspace,
     systemMonitor,
+    commandCentre,
     reducedMotion,
     tabVisible,
     dataStale,
@@ -75,7 +76,23 @@ export function CorePanel() {
             history={memHistory}
           />
           <div className={styles.compactSystem}>
-            <h3>System</h3>
+            <h3>Current focus</h3>
+            <p>
+              {commandCentre.inventory?.foreground_application_id
+                ? commandCentre.inventory.applications.find(
+                    (app) =>
+                      app.application_id ===
+                      commandCentre.inventory?.foreground_application_id,
+                  )?.display_name ?? 'Approved app'
+                : 'No approved app focused'}
+            </p>
+            <p className={styles.focusMeta}>
+              {commandCentre.inventory?.running_applications ?? 0} Jarvis apps open
+            </p>
+            <p className={styles.focusMeta}>
+              Return:{' '}
+              {commandCentre.hotkey?.shortcuts[0]?.display ?? 'Ctrl + Alt + J'}
+            </p>
             <Link to="/system?section=network">
               RX {formatRate(snap?.network.receive_bytes_per_second)}
             </Link>

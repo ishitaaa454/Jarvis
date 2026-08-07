@@ -62,6 +62,8 @@ class ApplicationDefinition(BaseModel):
     request_focus_on_launch: bool = False
     allow_multiple_instances: bool = False
     order: int = Field(default=100, ge=0)
+    favourite: bool = False
+    allow_preview: bool = False
 
     @field_validator("launch_arguments")
     @classmethod

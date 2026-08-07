@@ -159,6 +159,31 @@ class Settings(BaseSettings):
     system_websocket_metrics_enabled: bool = True
     system_websocket_process_events_enabled: bool = True
 
+    # Phase 7 — Application Command Centre
+    window_inventory_enabled: bool = True
+    window_inventory_interval_seconds: float = Field(default=1.0, gt=0)
+    window_recent_limit: int = Field(default=20, ge=1, le=50)
+    window_title_mode: str = "SAFE"
+    window_debug_full_titles: bool = False
+
+    global_hotkey_enabled: bool = True
+    global_hotkey_show_dashboard: str = "CTRL+ALT+J"
+
+    browser_integration_enabled: bool = True
+    browser_integration_mode: str = "session"
+    browser_cdp_enabled: bool = False
+    browser_cdp_host: str = "127.0.0.1"
+    browser_cdp_port: int = Field(default=9222, ge=1, le=65535)
+    browser_cdp_timeout_seconds: float = Field(default=2.0, gt=0)
+
+    window_previews_enabled: bool = False
+    window_preview_mode: str = "OFF"
+    window_preview_interval_seconds: float = Field(default=3.0, gt=0)
+    window_preview_max_width: int = Field(default=480, ge=64, le=1920)
+    window_preview_jpeg_quality: int = Field(default=65, ge=20, le=95)
+    window_preview_cache_seconds: float = Field(default=2.0, gt=0)
+    allow_sensitive_app_previews: bool = False
+
     @field_validator("voice_device_id", "tts_output_device_id", mode="before")
     @classmethod
     def blank_device_id_as_none(cls, value: Any) -> Any:
@@ -238,6 +263,39 @@ class Settings(BaseSettings):
         cleaned = value.strip().lower()
         if cleaned not in allowed:
             raise ValueError(f"SYSTEM_PROCESS_DEFAULT_SORT must be one of {sorted(allowed)}")
+        return cleaned
+
+    @field_validator("window_title_mode")
+    @classmethod
+    def validate_title_mode(cls, value: str) -> str:
+        cleaned = value.strip().upper()
+        if cleaned not in {"SAFE", "FULL", "HIDDEN"}:
+            raise ValueError("WINDOW_TITLE_MODE must be SAFE, FULL, or HIDDEN")
+        return cleaned
+
+    @field_validator("global_hotkey_show_dashboard")
+    @classmethod
+    def validate_hotkey(cls, value: str) -> str:
+        cleaned = value.strip().upper().replace(" ", "")
+        allowed = {"CTRL+ALT+J", "CTRL+SHIFT+J", "CTRL+ALT+SPACE"}
+        if cleaned not in allowed:
+            raise ValueError(f"GLOBAL_HOTKEY_SHOW_DASHBOARD must be one of {sorted(allowed)}")
+        return cleaned
+
+    @field_validator("browser_cdp_host")
+    @classmethod
+    def validate_cdp_host(cls, value: str) -> str:
+        host = value.strip().lower()
+        if host not in {"127.0.0.1", "localhost", "::1"}:
+            raise ValueError("BROWSER_CDP_HOST must be loopback (127.0.0.1 / localhost)")
+        return host
+
+    @field_validator("window_preview_mode")
+    @classmethod
+    def validate_preview_mode(cls, value: str) -> str:
+        cleaned = value.strip().upper()
+        if cleaned not in {"OFF", "BLURRED", "VISIBLE"}:
+            raise ValueError("WINDOW_PREVIEW_MODE must be OFF, BLURRED, or VISIBLE")
         return cleaned
 
     @model_validator(mode="after")

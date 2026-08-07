@@ -313,7 +313,77 @@ export function dispatchDashboardEvent(
       };
     }
     case 'system.processes_updated':
+    case 'windows.inventory_changed':
+    case 'windows.foreground_changed':
       return {};
+    case 'hotkey.status_changed': {
+      const status = String(p.status ?? '');
+      if (status === 'REGISTERED' || status === 'CONFLICT' || status === 'ERROR') {
+        return {
+          timeline: entry(
+            message.type,
+            ts,
+            status,
+            'SYSTEM',
+            status === 'REGISTERED' ? 'SUCCESS' : 'WARNING',
+            status === 'REGISTERED'
+              ? 'Global Jarvis shortcut registered'
+              : `Global shortcut ${status.toLowerCase()}`,
+          ),
+        };
+      }
+      return {};
+    }
+    case 'hotkey.triggered':
+      return {
+        timeline: entry(
+          message.type,
+          ts,
+          'show-dashboard',
+          'SYSTEM',
+          'INFO',
+          'Returned to dashboard (Ctrl+Alt+J)',
+        ),
+      };
+    case 'browser.status_changed':
+      return {};
+    case 'browser.destination_opened': {
+      const id = String(p.id ?? 'destination');
+      return {
+        timeline: entry(
+          message.type,
+          ts,
+          id,
+          'APPLICATION',
+          'SUCCESS',
+          `${id} destination opened`,
+        ),
+      };
+    }
+    case 'browser.destination_focused': {
+      const id = String(p.id ?? 'destination');
+      return {
+        timeline: entry(
+          message.type,
+          ts,
+          `${id}-focus`,
+          'APPLICATION',
+          'INFO',
+          `${id} destination focused`,
+        ),
+      };
+    }
+    case 'browser.destination_unavailable':
+      return {
+        timeline: entry(
+          message.type,
+          ts,
+          String(p.id ?? 'dest'),
+          'APPLICATION',
+          'WARNING',
+          'Browser destination unavailable',
+        ),
+      };
     default:
       if (import.meta.env.DEV) {
         console.warn(`[dashboard] Unknown WebSocket event: ${message.type}`);

@@ -271,6 +271,23 @@ function mockDashboard(
       requestRefresh: vi.fn(),
       handleSocketMessage: vi.fn(),
     } as DashboardContextValue['systemMonitor'],
+    commandCentre: {
+      inventory: null,
+      recent: [],
+      hotkey: null,
+      browserStatus: null,
+      destinations: [],
+      switchingLabel: null,
+      error: null,
+      loading: false,
+      refresh: vi.fn(),
+      focusWindowId: vi.fn(),
+      restoreWindowId: vi.fn(),
+      openDestination: vi.fn(),
+      focusDestination: vi.fn(),
+      retryHotkey: vi.fn(),
+      handleSocketMessage: vi.fn(),
+    } as DashboardContextValue['commandCentre'],
     ...partial,
   };
 }

@@ -452,6 +452,18 @@ class WorkspaceService:
             raise KeyError(app_id)
         return await self._controller.focus_one(app)
 
+    def list_application_definitions(self):
+        if self._registry is None:
+            return []
+        return self._registry.all_applications()
+
+    def open_url_via_chrome(self, url: str) -> tuple[bool, str | None]:
+        """Open an approved URL through the workspace BrowserController."""
+        browser = getattr(self._controller, "_browser_controller", None)
+        if browser is None:
+            return False, "Browser controller unavailable"
+        return browser.open_url(url)
+
     # ------------------------------------------------------------------
     # Event publishing
     # ------------------------------------------------------------------

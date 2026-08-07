@@ -355,6 +355,16 @@ export function SettingsPage() {
         </div>
       </section>
 
+      <section className={`glass-panel ${styles.card}`} aria-labelledby="command-centre-heading">
+        <h2 id="command-centre-heading">Command Centre</h2>
+        <p className="muted">
+          Global return shortcut is Ctrl + Alt + J (RegisterHotKey — no keyboard logging).
+          Browser destinations use session tracking by default; exact Chrome tab focus requires
+          optional loopback CDP and is disabled by default. Window previews are off and blocked
+          for Gmail, Teams, and WhatsApp unless explicitly allowed in backend configuration.
+        </p>
+      </section>
+
       <section className={`glass-panel ${styles.card}`} aria-labelledby="workspace-apps-heading">
         <h2 id="workspace-apps-heading">Workspace applications</h2>
         <p className="muted">

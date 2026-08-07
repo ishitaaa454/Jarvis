@@ -1,8 +1,46 @@
 # Jarvis Workspace
 
-Local Windows desktop assistant. Phases 1–5 delivered the FastAPI backend, offline wake phrase, Piper TTS, Windows workspace launching, and the cinematic three-panel dashboard. **Phase 6** upgrades the System Intelligence panel into a real-time local monitoring centre (CPU, memory, disks, network, battery, processes, optional GPU/temperatures).
+Local Windows desktop assistant. Phases 1–6 delivered wake phrase, Piper TTS, workspace launching, cinematic dashboard, and advanced system monitoring. **Phase 7** upgrades the Applications panel into a rich Application Command Centre with multi-window switching, Ctrl+Alt+J return-to-Jarvis, safer browser destinations, and optional privacy-controlled previews.
 
-**Phase 6 does not include** process kill/priority controls, calendar, unread email, news aggregation, Ollama, unrestricted voice commands, or Windows packaging. All monitoring is local — no cloud monitoring service or paid API is required.
+**Phase 7 does not include** calendar, unread email, news aggregation, Ollama, process killing, keyboard logging, cookie access, or Windows packaging. All features remain local — no paid API is required.
+
+## Phase 7 — Application Command Centre
+
+### Using the Command Centre
+
+Open `/applications`. Favourites sit at the top. Expand an application to see its safe windows, then **Switch** or **Restore**. Search filters approved app names and safe titles only.
+
+### Global shortcut
+
+Default: **Ctrl + Alt + J** (RegisterHotKey). Returns toward the Jarvis dashboard (opens/focuses the dashboard destination and Chrome). Conflicts are reported in Settings / Command Centre. Jarvis does **not** log other keystrokes.
+
+```powershell
+.\scripts\test-command-centre.ps1 -Hotkey
+```
+
+### Browser destinations
+
+Dashboard, Gmail, and News use session tracking by default. Exact tab focus requires optional Chrome DevTools on loopback (`BROWSER_CDP_ENABLED=true`, port 9222) — never enabled automatically, never accesses cookies or page JavaScript.
+
+### Window title privacy
+
+Default `WINDOW_TITLE_MODE=SAFE`. Gmail, Teams, WhatsApp, and Spotify never expose private titles. Raw HWND values are never sent to the frontend.
+
+### Window previews
+
+Disabled by default (`WINDOW_PREVIEWS_ENABLED=false`). Sensitive apps (Gmail/Teams/WhatsApp) are blocked unless `ALLOW_SENSITIVE_APP_PREVIEWS=true`. Previews are in-memory only with `Cache-Control: no-store`.
+
+### Manual tools
+
+```powershell
+.\scripts\test-command-centre.ps1 -Windows
+.\scripts\test-command-centre.ps1 -Recent
+.\scripts\test-command-centre.ps1 -AppId vscode
+.\scripts\test-command-centre.ps1 -Browser
+.\scripts\test-command-centre.ps1 -Destination gmail
+```
+
+---
 
 ## Phase 6 — Advanced local system monitoring
 

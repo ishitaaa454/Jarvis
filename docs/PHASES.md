@@ -51,7 +51,7 @@
 - Responsive layout, accessibility announcements, reduced motion
 - Vitest + React Testing Library coverage for dashboard logic/UI
 
-## Phase 6 (current) — Advanced system monitoring
+## Phase 6 — Advanced system monitoring
 
 - Advanced local system monitoring (read-only)
 - CPU and per-core metrics, frequency when available
@@ -66,13 +66,20 @@
 - Capability detection with unsupported / unavailable states
 - Bounded live session metric history and System Intelligence panel charts
 
-Phase 6 does **not** include process control, calendar, unread email, news aggregation, Ollama, unrestricted voice commands, or Windows packaging.
+## Phase 7 (current) — Rich Application Command Centre
+
+- Multi-window switching for approved applications
+- Opaque window IDs (HWND never exposed)
+- SAFE window-title privacy (Gmail/Teams/WhatsApp/Spotify protected)
+- Favourites, recent windows, search/filter
+- Global Ctrl+Alt+J dashboard return shortcut (RegisterHotKey — no keylogging)
+- Safer browser destinations (dashboard / Gmail / News) with session tracking
+- Optional Chrome CDP exact-tab focus (disabled, loopback-only)
+- Optional privacy-controlled window previews (disabled by default; sensitive apps blocked)
+
+Phase 7 does **not** include calendar, unread email, news aggregation, Ollama, process killing, or Windows packaging.
 
 ## Future phases
-
-### Phase 7 — Rich application command centre
-
-Better app switching, global dashboard shortcut, optional live thumbnails, safer browser integration.
 
 ### Phase 8 — Calendar and meetings
 
@@ -92,4 +99,4 @@ Focus, development, work, and relax modes.
 
 ### Phase 12 — Windows desktop packaging
 
-System tray, automatic startup, global keyboard shortcut, kiosk-style dashboard mode.
+System tray, automatic startup, native dashboard window, kiosk-style dashboard mode.

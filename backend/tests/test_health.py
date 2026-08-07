@@ -94,3 +94,12 @@ def test_websocket_receives_connection_event(client: TestClient) -> None:
         assert metrics["type"] == "system.metrics"
         assert "cpu" in metrics["payload"]
         assert "memory" in metrics["payload"]
+
+        windows_msg = websocket.receive_json()
+        assert windows_msg["type"] == "windows.inventory_changed"
+
+        hotkey_msg = websocket.receive_json()
+        assert hotkey_msg["type"] == "hotkey.status_changed"
+
+        browser_msg = websocket.receive_json()
+        assert browser_msg["type"] == "browser.status_changed"

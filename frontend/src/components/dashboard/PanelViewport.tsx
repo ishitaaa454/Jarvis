@@ -6,7 +6,7 @@ import {
   usePointerSwipe,
 } from '../../hooks/usePanelNavigation';
 import { PANEL_ORDER } from '../../types/dashboard';
-import { ApplicationsCommandGrid } from '../applications/ApplicationCommandGrid';
+import { ApplicationCommandCentre } from '../command-centre/ApplicationCommandCentre';
 import { CorePanel } from '../core/CorePanel';
 import { SystemIntelligencePanel } from '../system/SystemIntelligencePanel';
 import { GlobalStatusStrip } from './GlobalStatusStrip';
@@ -60,7 +60,7 @@ export function PanelViewport() {
               aria-hidden={navigation.activePanel !== panel}
               data-panel={panel}
             >
-              {panel === 'applications' && <ApplicationsCommandGrid />}
+              {panel === 'applications' && <ApplicationCommandCentre />}
               {panel === 'core' && <CorePanel />}
               {panel === 'system' && <SystemIntelligencePanel />}
             </section>

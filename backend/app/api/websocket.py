@@ -13,6 +13,12 @@ from app.core.events import (
     ASSISTANT_ACTIVATION_STARTED,
     ASSISTANT_WORKSPACE_INITIALIZATION_STARTED,
     ASSISTANT_WORKSPACE_READY,
+    BROWSER_DESTINATION_FOCUSED,
+    BROWSER_DESTINATION_OPENED,
+    BROWSER_DESTINATION_UNAVAILABLE,
+    BROWSER_STATUS_CHANGED,
+    HOTKEY_STATUS_CHANGED,
+    HOTKEY_TRIGGERED,
     STATE_CHANGED,
     SYSTEM_CAPABILITIES_CHANGED,
     SYSTEM_METRICS,
@@ -30,6 +36,8 @@ from app.core.events import (
     VOICE_ERROR,
     VOICE_STATUS_CHANGED,
     VOICE_WAKE_DETECTED,
+    WINDOWS_FOREGROUND_CHANGED,
+    WINDOWS_INVENTORY_CHANGED,
     WORKSPACE_APPLICATION_RESULT,
     WORKSPACE_APPLICATION_STATUS,
     WORKSPACE_ERROR,
@@ -161,6 +169,19 @@ def create_system_monitor_event_handlers(manager: ConnectionManager) -> list[tup
     ]
 
 
+def create_command_centre_event_handlers(manager: ConnectionManager) -> list[tuple[str, Any]]:
+    return [
+        (WINDOWS_INVENTORY_CHANGED, _mirror(manager, WINDOWS_INVENTORY_CHANGED)),
+        (WINDOWS_FOREGROUND_CHANGED, _mirror(manager, WINDOWS_FOREGROUND_CHANGED)),
+        (HOTKEY_STATUS_CHANGED, _mirror(manager, HOTKEY_STATUS_CHANGED)),
+        (HOTKEY_TRIGGERED, _mirror(manager, HOTKEY_TRIGGERED)),
+        (BROWSER_STATUS_CHANGED, _mirror(manager, BROWSER_STATUS_CHANGED)),
+        (BROWSER_DESTINATION_OPENED, _mirror(manager, BROWSER_DESTINATION_OPENED)),
+        (BROWSER_DESTINATION_FOCUSED, _mirror(manager, BROWSER_DESTINATION_FOCUSED)),
+        (BROWSER_DESTINATION_UNAVAILABLE, _mirror(manager, BROWSER_DESTINATION_UNAVAILABLE)),
+    ]
+
+
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
     """Accept a dashboard client and stream connection, state, voice, and TTS events."""
@@ -249,6 +270,36 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         ).to_dict(),
     )
 
+    window_inventory = getattr(app.state, "window_inventory_service", None)
+    if window_inventory is not None:
+        await manager.send_json(
+            websocket,
+            WebSocketMessage(
+                type=WINDOWS_INVENTORY_CHANGED,
+                payload=window_inventory.get_snapshot().model_dump(mode="json"),
+            ).to_dict(),
+        )
+
+    hotkey_service = getattr(app.state, "global_hotkey_service", None)
+    if hotkey_service is not None:
+        await manager.send_json(
+            websocket,
+            WebSocketMessage(
+                type=HOTKEY_STATUS_CHANGED,
+                payload=hotkey_service.get_status().model_dump(mode="json"),
+            ).to_dict(),
+        )
+
+    browser_service = getattr(app.state, "browser_integration_service", None)
+    if browser_service is not None:
+        await manager.send_json(
+            websocket,
+            WebSocketMessage(
+                type=BROWSER_STATUS_CHANGED,
+                payload=browser_service.get_status().model_dump(mode="json"),
+            ).to_dict(),
+        )
+
     try:
         while True:
             await websocket.receive_text()
@@ -282,6 +333,10 @@ async def register_websocket_broadcasts(
         handlers.append(handler)
 
     for event_type, handler in create_system_monitor_event_handlers(manager):
+        await event_bus.subscribe(event_type, handler)
+        handlers.append(handler)
+
+    for event_type, handler in create_command_centre_event_handlers(manager):
         await event_bus.subscribe(event_type, handler)
         handlers.append(handler)
 

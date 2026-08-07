@@ -66,6 +66,12 @@
   color: var(--accent-bright);
 }
 
+.focusMeta {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
 .services ul {
   list-style: none;
   margin: 0;
