@@ -19,6 +19,11 @@ os.environ.setdefault("TTS_ENABLED", "true")
 os.environ.setdefault("TTS_START_AUTOMATICALLY", "false")
 os.environ.setdefault("WORKSPACE_ENABLED", "true")
 os.environ.setdefault("WORKSPACE_START_AFTER_WELCOME", "false")
+os.environ.setdefault("SYSTEM_MONITOR_ENABLED", "true")
+os.environ.setdefault("SYSTEM_MONITOR_START_AUTOMATICALLY", "false")
+os.environ.setdefault("NVIDIA_NVML_ENABLED", "false")
+os.environ.setdefault("TEMPERATURE_MONITOR_ENABLED", "true")
+os.environ.setdefault("LIBRE_HARDWARE_MONITOR_ENABLED", "false")
 
 
 @pytest.fixture(autouse=True)

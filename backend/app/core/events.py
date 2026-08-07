@@ -73,3 +73,11 @@ WORKSPACE_WARNING = "workspace.warning"
 WORKSPACE_ERROR = "workspace.error"
 ASSISTANT_WORKSPACE_INITIALIZATION_STARTED = "assistant.workspace_initialization_started"
 ASSISTANT_WORKSPACE_READY = "assistant.workspace_ready"
+
+# Phase 6 system monitoring events
+SYSTEM_MONITOR_STATUS = "system.monitor_status"
+SYSTEM_METRICS = "system.metrics"
+SYSTEM_PROCESSES_UPDATED = "system.processes_updated"
+SYSTEM_CAPABILITIES_CHANGED = "system.capabilities_changed"
+SYSTEM_MONITOR_WARNING = "system.monitor_warning"
+SYSTEM_MONITOR_ERROR = "system.monitor_error"

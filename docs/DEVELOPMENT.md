@@ -216,10 +216,10 @@ Extend `dispatchDashboardEvent` with a stable id via `makeTimelineId`. Do not ap
 
 ### Metrics rules
 
-- Sample only from the shared `useHealthMetrics` loop
-- Bound history (~90 samples)
-- Never invent GPU, disk, network, or temperature values
-- Label unavailable metrics as later-phase placeholders
+- Core panel may still use shared `useHealthMetrics` for compact CPU/memory sparklines
+- System Intelligence uses `useSystemMonitor` + `/api/system-monitor/*` for Phase 6 data
+- Bound history; never invent GPU, disk, network, battery, or temperature values
+- Show `UNSUPPORTED` / `UNAVAILABLE` / `NOT DETECTED` / `PROVIDER NOT INSTALLED` instead of fake zeroes
 
 ### Motion and accessibility
 
@@ -227,6 +227,7 @@ Extend `dispatchDashboardEvent` with a stable id via `makeTimelineId`. Do not ap
 - Disable continuous animation under `prefers-reduced-motion`
 - Announce wake, speech start, workspace start/ready, and errors via `aria-live`
 - Keep keyboard panel navigation and visible focus rings
+- Do not announce every one-second metric tick
 
 ### Testing
 
@@ -237,6 +238,50 @@ npm run typecheck
 npm run build
 ```
 
+## System monitoring development (Phase 6)
+
+### Adding a system provider
+
+1. Add a provider module under `backend/app/services/system_monitor/`
+2. Return Pydantic models with availability metadata (`null` / reason codes for unsupported fields)
+3. Wire it into `SystemMonitorService` with a timeout
+4. Update capability detection and tests with fakes — do not require real hardware
+
+### Provider timeout and sampling rules
+
+- One scheduler owns intervals; do not add independent timers per metric
+- Reject overlapping sample cycles
+- On timeout: record error, continue other providers, avoid backlog
+
+### Rate-calculation rules
+
+- Use monotonic timestamps only
+- First sample, zero elapsed, negative delta, NaN/inf → unavailable (not zero)
+
+### Metric-history rules
+
+- Bounded deques only; no database
+- Reject NaN/infinity; preserve timestamps
+- Allow-list metric names for the history API
+
+### Process privacy requirements
+
+Never collect or expose command lines, executable paths, usernames, environment, open files, network connections, or window titles. No kill/priority endpoints.
+
+### Optional dependencies
+
+- NVIDIA: install `nvidia-ml-py` only when needed (`pip install nvidia-ml-py`)
+- LibreHardwareMonitor: optional local tool path via env; never auto-download or auto-elevate
+
+### Manual monitor tool
+
+```powershell
+.\scripts\test-system-monitor.ps1 -Snapshot
+.\scripts\test-system-monitor.ps1 -Watch -Seconds 30
+.\scripts\test-system-monitor.ps1 -Capabilities
+.\scripts\test-system-monitor.ps1 -Processes
+```
+
 ## Logging expectations
 
 - Startup and shutdown must appear in the terminal and `backend/logs/jarvis.log`
@@ -244,5 +289,7 @@ npm run build
 - Log every assistant state transition
 - Log voice start / stop / wake / errors
 - Log workspace run start / per-app results / finish / cancel
+- Log system-monitor start/stop, capability changes, provider failures (not every sample at INFO)
 - Log API client errors at warning level
 - Log unexpected exceptions with stack traces on the server only — never return stack traces to the frontend
+- Never log process command lines, usernames, paths, MAC addresses, or serial numbers

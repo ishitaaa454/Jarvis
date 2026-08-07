@@ -85,3 +85,12 @@ def test_websocket_receives_connection_event(client: TestClient) -> None:
         workspace_message = websocket.receive_json()
         assert workspace_message["type"] == "workspace.status_changed"
         assert "status" in workspace_message["payload"]
+
+        monitor_status = websocket.receive_json()
+        assert monitor_status["type"] == "system.monitor_status"
+        assert "status" in monitor_status["payload"]
+
+        metrics = websocket.receive_json()
+        assert metrics["type"] == "system.metrics"
+        assert "cpu" in metrics["payload"]
+        assert "memory" in metrics["payload"]

@@ -1,8 +1,91 @@
 # Jarvis Workspace
 
-Local Windows desktop assistant. Phases 1–4 delivered the FastAPI backend, offline wake phrase, Piper TTS, and Windows workspace launching. **Phase 5** transforms the React UI into an original cinematic three-panel dashboard driven by real backend state.
+Local Windows desktop assistant. Phases 1–5 delivered the FastAPI backend, offline wake phrase, Piper TTS, Windows workspace launching, and the cinematic three-panel dashboard. **Phase 6** upgrades the System Intelligence panel into a real-time local monitoring centre (CPU, memory, disks, network, battery, processes, optional GPU/temperatures).
 
-**Phase 5 does not include** GPU/network/temperature graphs, live window previews, calendar, unread email, news aggregation, Ollama, unrestricted voice commands, or Windows packaging.
+**Phase 6 does not include** process kill/priority controls, calendar, unread email, news aggregation, Ollama, unrestricted voice commands, or Windows packaging. All monitoring is local — no cloud monitoring service or paid API is required.
+
+## Phase 6 — Advanced local system monitoring
+
+### Starting system monitoring
+
+Monitoring starts with the backend when `SYSTEM_MONITOR_ENABLED=true` and `SYSTEM_MONITOR_START_AUTOMATICALLY=true` (defaults in `.env.example`). Open the System panel (`/system`) to browse Overview, CPU, Memory, Storage, Network, Power, GPU, Temperatures, Processes, and Capabilities.
+
+```powershell
+cd scripts
+.\start-development.ps1
+```
+
+### Live session history
+
+Charts show **LIVE SESSION HISTORY** only — bounded in-memory samples (~5 minutes at 1s). History resets when the backend restarts. It is not long-term storage.
+
+### What is monitored
+
+| Area | Behaviour |
+| --- | --- |
+| CPU | Overall %, per-core %, frequency when available, core counts |
+| Memory / swap | Bytes + %, binary units (KiB/MiB/GiB) |
+| Disks | Fixed-drive capacity; aggregate read/write rates (not falsely assigned per drive) |
+| Network | Receive/send rates and adapter table (no MAC addresses by default) |
+| Battery | Real status, or **NO BATTERY DETECTED** on desktops |
+| Processes | Read-only name/PID/CPU/memory/status — no cmdline, path, username, or kill |
+| GPU | Optional NVIDIA NVML; otherwise clear unsupported/provider-missing state |
+| Temperatures | Optional `psutil` / LibreHardwareMonitor; otherwise provider-not-available |
+
+Unsupported metrics are never shown as `0`. States include `UNSUPPORTED`, `UNAVAILABLE`, `PERMISSION LIMITED`, `NOT DETECTED`, `PROVIDER NOT INSTALLED`, `DATA PENDING`.
+
+### Freshness
+
+Metric groups show `LIVE`, `DELAYED`, `STALE`, or `UNAVAILABLE` from backend timestamps. On WebSocket disconnect, last values remain but are marked STALE.
+
+### Optional NVIDIA GPU monitoring
+
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+pip install nvidia-ml-py
+```
+
+Set `GPU_MONITOR_ENABLED=true` and `NVIDIA_NVML_ENABLED=true`. If NVML, drivers, or an NVIDIA GPU are missing, the backend still runs and the UI explains why GPU data is unavailable.
+
+### Optional LibreHardwareMonitor temperatures
+
+Do not auto-download. Install LibreHardwareMonitor yourself if desired, then set:
+
+```
+TEMPERATURE_MONITOR_ENABLED=true
+LIBRE_HARDWARE_MONITOR_ENABLED=true
+LIBRE_HARDWARE_MONITOR_PATH=C:\path\to\LibreHardwareMonitor
+```
+
+Paths are never exposed through API responses.
+
+### Manual monitor tests
+
+```powershell
+.\scripts\test-system-monitor.ps1 -Snapshot
+.\scripts\test-system-monitor.ps1 -Watch -Seconds 30
+.\scripts\test-system-monitor.ps1 -Processes
+.\scripts\test-system-monitor.ps1 -Capabilities
+.\scripts\test-system-monitor.ps1 -Gpu
+.\scripts\test-system-monitor.ps1 -Temperatures
+```
+
+### Process privacy
+
+Jarvis cannot kill processes, change priority, or show command lines / usernames / executable paths. Access-denied processes are skipped safely.
+
+### Troubleshooting
+
+| Symptom | Check |
+| --- | --- |
+| Provider failure | Capabilities panel + backend log; use Retry where offered |
+| Access-denied processes | Expected for protected OS processes; `limited_count` rises |
+| No battery data | Normal on desktops — not an error |
+| GPU errors | Optional package/drivers; monitoring continues without GPU |
+| Temperature missing | Common on Windows without sensors / LHM |
+
+---
 
 ## Phase 5 — Cinematic dashboard
 
@@ -39,7 +122,7 @@ The core reacts to real assistant state: offline, listening, processing, speakin
 
 ### Activity timeline
 
-Events are categorised (SYSTEM, VOICE, SPEECH, WORKSPACE, APPLICATION, CONNECTION, ERROR). Replayed WebSocket events are deduplicated. Clear only affects the local UI timeline — backend logs are unchanged. Window titles are not shown.
+Events are categorised (SYSTEM, VOICE, SPEECH, WORKSPACE, APPLICATION, CONNECTION, ERROR). Replayed WebSocket events are deduplicated. Clear only affects the local UI timeline — backend logs are unchanged. Window titles are not shown. System-monitor timeline entries are significant changes only (start/degraded/capability), not every CPU tick.
 
 ### Application cards
 
@@ -47,11 +130,11 @@ Cards use Phase 4 status only: Active, Background, Ready to launch, Not configur
 
 ### Metrics
 
-CPU and memory are live from `/api/health`. Sparklines are **live session history** only (in-memory). GPU, disk, network, battery, and temperatures are labelled **AVAILABLE IN A LATER PHASE** with no fake numbers.
+CPU and memory remain available via `/api/health` for Core sparklines. Phase 6 System panel uses `/api/system-monitor/*` and WebSocket `system.*` events for full monitoring. Charts are **live session history** only.
 
 ### Connection loss
 
-Disconnected clients show CONNECTION LOST / STALE. On reconnect, voice, TTS, workspace, health, and assistant state are refreshed. No second WebSocket is opened.
+Disconnected clients show CONNECTION LOST / STALE. On reconnect, voice, TTS, workspace, health, system monitor, and assistant state are refreshed. No second WebSocket is opened.
 
 ### Reduced motion
 

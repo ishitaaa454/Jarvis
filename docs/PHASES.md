@@ -37,7 +37,7 @@
 - Workspace progress events and manual open / focus controls
 - Microphone remains paused until workspace launch finishes
 
-## Phase 5 (current) — Advanced cinematic dashboard
+## Phase 5 — Advanced cinematic dashboard
 
 - Original dark futuristic Jarvis core (CSS/SVG, no copyrighted artwork)
 - Three-panel navigation: Applications · Core · System
@@ -51,13 +51,24 @@
 - Responsive layout, accessibility announcements, reduced motion
 - Vitest + React Testing Library coverage for dashboard logic/UI
 
-Phase 5 does **not** include GPU/disk/network graphs, live thumbnails, calendar, unread email, news aggregation, Ollama, unrestricted voice commands, or Windows packaging.
+## Phase 6 (current) — Advanced system monitoring
+
+- Advanced local system monitoring (read-only)
+- CPU and per-core metrics, frequency when available
+- Memory and swap
+- Disk capacity and aggregate activity rates
+- Network receive/send throughput and adapter table
+- Battery information or clear no-battery state
+- System uptime and safe static host information
+- Safe process table (no cmdline, path, username, or kill controls)
+- Optional NVIDIA GPU monitoring via NVML when installed
+- Optional temperature monitoring (`psutil` / LibreHardwareMonitor when configured)
+- Capability detection with unsupported / unavailable states
+- Bounded live session metric history and System Intelligence panel charts
+
+Phase 6 does **not** include process control, calendar, unread email, news aggregation, Ollama, unrestricted voice commands, or Windows packaging.
 
 ## Future phases
-
-### Phase 6 — Advanced system monitoring
-
-Disk information, network throughput, battery status, process table, GPU data where supported, hardware temperatures where supported.
 
 ### Phase 7 — Rich application command centre
 

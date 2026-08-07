@@ -38,12 +38,32 @@
   padding: 0.85rem;
 }
 
+.compactSystem {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-medium);
+  background: var(--surface-glass);
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.compactSystem h3,
 .services h3 {
   margin: 0 0 0.55rem;
   font-size: 0.72rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+
+.compactSystem a {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.compactSystem a:hover {
+  color: var(--accent-bright);
 }
 
 .services ul {

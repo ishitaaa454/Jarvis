@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api import health, tts, voice, websocket
+from app.api import system_monitor as system_monitor_api
 from app.api import workspace as workspace_api
 from app.api.websocket import ConnectionManager, register_websocket_broadcasts
 from app.core.config import get_settings
@@ -22,6 +23,7 @@ from app.core.state_manager import StateManager
 from app.models.assistant_state import AssistantState
 from app.services.assistant import ActivationCoordinator
 from app.services.placeholders.integration_service import IntegrationService
+from app.services.system_monitor import SystemMonitorService
 from app.services.system_service import SystemService
 from app.services.tts import TtsService
 from app.services.voice import VoiceService
@@ -55,11 +57,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     voice_service: VoiceService = app.state.voice_service
     tts_service: TtsService = app.state.tts_service
     workspace_service: WorkspaceService = app.state.workspace_service
+    system_monitor: SystemMonitorService = app.state.system_monitor_service
     coordinator: ActivationCoordinator = app.state.activation_coordinator
 
     voice_service.bind(state_manager=state_manager, event_bus=app.state.event_bus)
     tts_service.bind(event_bus=app.state.event_bus)
     workspace_service.bind(event_bus=app.state.event_bus)
+    system_monitor.bind(app.state.event_bus)
     coordinator.bind(
         state_manager=state_manager,
         event_bus=app.state.event_bus,
@@ -88,6 +92,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger.exception("Workspace service startup failed — continuing without workspace launch")
 
     try:
+        await system_monitor.on_startup()
+    except Exception:
+        logger.exception("System monitor startup failed — continuing without monitoring")
+
+    try:
         await coordinator.start()
     except Exception:
         logger.exception("ActivationCoordinator failed to start")
@@ -99,6 +108,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await coordinator.stop()
     except Exception:
         logger.exception("ActivationCoordinator shutdown failed")
+
+    try:
+        await system_monitor.shutdown()
+    except Exception:
+        logger.exception("System monitor shutdown failed")
 
     try:
         await workspace_service.cancel()
@@ -138,12 +152,14 @@ def create_app() -> FastAPI:
     voice_service = VoiceService(settings=settings)
     tts_service = TtsService(settings=settings, event_bus=event_bus)
     workspace_service = WorkspaceService(settings=settings, event_bus=event_bus)
+    system_monitor = SystemMonitorService(settings=settings, event_bus=event_bus)
     coordinator = ActivationCoordinator(settings=settings)
 
     app.state.event_bus = event_bus
     app.state.state_manager = state_manager
     app.state.connection_manager = connection_manager
     app.state.system_service = SystemService()
+    app.state.system_monitor_service = system_monitor
     app.state.voice_service = voice_service
     app.state.tts_service = tts_service
     app.state.activation_coordinator = coordinator
@@ -163,6 +179,7 @@ def create_app() -> FastAPI:
     app.include_router(voice.router)
     app.include_router(tts.router)
     app.include_router(workspace_api.router)
+    app.include_router(system_monitor_api.router)
     app.include_router(websocket.router)
 
     @app.exception_handler(StarletteHTTPException)

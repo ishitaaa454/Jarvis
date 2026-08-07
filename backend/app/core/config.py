@@ -129,6 +129,36 @@ class Settings(BaseSettings):
     gmail_url: str = "https://mail.google.com/"
     news_url: str = "https://news.google.com/"
 
+    # Phase 6 — advanced local system monitoring
+    system_monitor_enabled: bool = True
+    system_monitor_start_automatically: bool = True
+    system_fast_sample_interval_seconds: float = Field(default=1.0, gt=0)
+    system_process_sample_interval_seconds: float = Field(default=5.0, gt=0)
+    system_static_refresh_interval_seconds: float = Field(default=60.0, gt=0)
+    system_optional_hardware_interval_seconds: float = Field(default=2.0, gt=0)
+    system_history_max_samples: int = Field(default=300, ge=10, le=5000)
+    system_history_max_api_points: int = Field(default=300, ge=10, le=5000)
+    system_provider_timeout_seconds: float = Field(default=3.0, gt=0)
+    system_process_timeout_seconds: float = Field(default=15.0, gt=0)
+    system_process_limit: int = Field(default=100, ge=1, le=100)
+    system_process_default_sort: str = "cpu"
+    system_process_include_start_time: bool = True
+    system_include_network_adapters: bool = True
+    system_include_disconnected_adapters: bool = False
+    system_include_loopback_adapters: bool = False
+    system_include_virtual_adapters: bool = True
+    system_show_ip_addresses: bool = False
+    system_include_network_drives: bool = False
+    system_include_removable_drives: bool = False
+    system_show_hostname: bool = True
+    gpu_monitor_enabled: bool = True
+    nvidia_nvml_enabled: bool = True
+    temperature_monitor_enabled: bool = True
+    libre_hardware_monitor_enabled: bool = False
+    libre_hardware_monitor_path: str = ""
+    system_websocket_metrics_enabled: bool = True
+    system_websocket_process_events_enabled: bool = True
+
     @field_validator("voice_device_id", "tts_output_device_id", mode="before")
     @classmethod
     def blank_device_id_as_none(cls, value: Any) -> Any:
@@ -200,6 +230,15 @@ class Settings(BaseSettings):
         if not validate_https_url(value, allow_localhost_http=True):
             raise ValueError(f"Unsafe or non-HTTPS workspace URL rejected: {value!r}")
         return value
+
+    @field_validator("system_process_default_sort")
+    @classmethod
+    def validate_process_sort(cls, value: str) -> str:
+        allowed = {"cpu", "memory", "name", "pid"}
+        cleaned = value.strip().lower()
+        if cleaned not in allowed:
+            raise ValueError(f"SYSTEM_PROCESS_DEFAULT_SORT must be one of {sorted(allowed)}")
+        return cleaned
 
     @model_validator(mode="after")
     def normalize_environment(self) -> Settings:

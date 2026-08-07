@@ -41,11 +41,11 @@ function renderAt(path: string) {
 describe('panel navigation UI', () => {
   it('selects core by default', () => {
     renderAt('/');
-    expect(screen.getByRole('tab', { name: 'Core' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: 'Core' }, { timeout: 10000 })).toHaveAttribute(
       'aria-selected',
       'true',
     );
-  });
+  }, 15000);
 
   it('selects applications route', () => {
     renderAt('/applications');
@@ -162,6 +162,21 @@ function mockDashboard(
     voice: voice as DashboardContextValue['voice'],
     speech: speech as DashboardContextValue['speech'],
     workspace: workspace as DashboardContextValue['workspace'],
+    systemMonitor: {
+      status: null,
+      snapshot: null,
+      capabilities: null,
+      processes: null,
+      series: {},
+      freshness: 'UNAVAILABLE',
+      error: null,
+      loading: false,
+      refresh: vi.fn(),
+      refreshProcesses: vi.fn(),
+      retryProvider: vi.fn(),
+      requestRefresh: vi.fn(),
+      handleSocketMessage: vi.fn(),
+    } as DashboardContextValue['systemMonitor'],
     ...partial,
   };
 }

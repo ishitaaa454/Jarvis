@@ -15,6 +15,10 @@ import { useHealthMetrics } from '../hooks/useHealthMetrics';
 import { useJarvisSocket } from '../hooks/useJarvisSocket';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useSpeechStatus, type UseSpeechStatusResult } from '../hooks/useSpeechStatus';
+import {
+  useSystemMonitor,
+  type UseSystemMonitorResult,
+} from '../hooks/useSystemMonitor';
 import { useVoiceStatus, type UseVoiceStatusResult } from '../hooks/useVoiceStatus';
 import {
   useWorkspaceStatus,
@@ -51,6 +55,7 @@ export interface DashboardContextValue {
   voice: UseVoiceStatusResult;
   speech: UseSpeechStatusResult;
   workspace: UseWorkspaceStatusResult;
+  systemMonitor: UseSystemMonitorResult;
 }
 
 const DashboardContext = createContext<DashboardContextValue | null>(null);
@@ -63,6 +68,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const speech = useSpeechStatus();
   const workspace = useWorkspaceStatus();
   const healthMetrics = useHealthMetrics();
+  const systemMonitor = useSystemMonitor(socket.connectionStatus === 'CONNECTED');
 
   const [assistantState, setAssistantState] = useState<AssistantState | null>(
     socket.assistantState,
@@ -152,6 +158,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       voice.handleSocketMessage(message);
       speech.handleSocketMessage(message);
       workspace.handleSocketMessage(message);
+      systemMonitor.handleSocketMessage(message);
     };
     socket.registerMessageHandler(handler);
     return () => socket.registerMessageHandler(null);
@@ -160,6 +167,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     voice.handleSocketMessage,
     speech.handleSocketMessage,
     workspace.handleSocketMessage,
+    systemMonitor.handleSocketMessage,
     publishAnnouncement,
   ]);
 
@@ -173,6 +181,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     void speech.refresh();
     void workspace.refresh();
     void healthMetrics.refresh();
+    void systemMonitor.refresh();
     void fetchState()
       .then((snapshot) => setAssistantState(snapshot.state))
       .catch(() => {
@@ -191,6 +200,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     speech.refresh,
     workspace.refresh,
     healthMetrics.refresh,
+    systemMonitor.refresh,
     publishAnnouncement,
   ]);
 
@@ -231,6 +241,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       voice,
       speech,
       workspace,
+      systemMonitor,
     }),
     [
       socket.connectionStatus,
@@ -251,6 +262,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       voice,
       speech,
       workspace,
+      systemMonitor,
     ],
   );
 

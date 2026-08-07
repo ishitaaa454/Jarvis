@@ -14,6 +14,12 @@ from app.core.events import (
     ASSISTANT_WORKSPACE_INITIALIZATION_STARTED,
     ASSISTANT_WORKSPACE_READY,
     STATE_CHANGED,
+    SYSTEM_CAPABILITIES_CHANGED,
+    SYSTEM_METRICS,
+    SYSTEM_MONITOR_ERROR,
+    SYSTEM_MONITOR_STATUS,
+    SYSTEM_MONITOR_WARNING,
+    SYSTEM_PROCESSES_UPDATED,
     TTS_ERROR,
     TTS_SEQUENCE_CANCELLED,
     TTS_SEQUENCE_FINISHED,
@@ -39,6 +45,7 @@ from app.models.application import workspace_status_to_ws_payload
 from app.models.tts import tts_status_to_ws_payload
 from app.models.voice import voice_status_to_ws_payload
 from app.models.websocket_message import WebSocketMessage
+from app.services.system_monitor.system_monitor_service import SystemMonitorService
 from app.services.tts.tts_service import TtsService
 from app.services.voice.voice_service import VoiceService
 from app.services.workspace.workspace_service import WorkspaceService
@@ -143,6 +150,17 @@ def create_workspace_event_handlers(manager: ConnectionManager) -> list[tuple[st
     ]
 
 
+def create_system_monitor_event_handlers(manager: ConnectionManager) -> list[tuple[str, Any]]:
+    return [
+        (SYSTEM_MONITOR_STATUS, _mirror(manager, SYSTEM_MONITOR_STATUS)),
+        (SYSTEM_METRICS, _mirror(manager, SYSTEM_METRICS)),
+        (SYSTEM_PROCESSES_UPDATED, _mirror(manager, SYSTEM_PROCESSES_UPDATED)),
+        (SYSTEM_CAPABILITIES_CHANGED, _mirror(manager, SYSTEM_CAPABILITIES_CHANGED)),
+        (SYSTEM_MONITOR_WARNING, _mirror(manager, SYSTEM_MONITOR_WARNING)),
+        (SYSTEM_MONITOR_ERROR, _mirror(manager, SYSTEM_MONITOR_ERROR)),
+    ]
+
+
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
     """Accept a dashboard client and stream connection, state, voice, and TTS events."""
@@ -152,6 +170,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     voice_service: VoiceService = app.state.voice_service
     tts_service: TtsService = app.state.tts_service
     workspace_service: WorkspaceService = app.state.workspace_service
+    system_monitor: SystemMonitorService = app.state.system_monitor_service
 
     await manager.connect(websocket)
 
@@ -200,6 +219,36 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         ).to_dict(),
     )
 
+    await manager.send_json(
+        websocket,
+        WebSocketMessage(
+            type=SYSTEM_MONITOR_STATUS,
+            payload=system_monitor.get_status().model_dump(mode="json"),
+        ).to_dict(),
+    )
+    await manager.send_json(
+        websocket,
+        WebSocketMessage(
+            type=SYSTEM_METRICS,
+            payload={
+                "cpu": system_monitor.get_snapshot().cpu.model_dump(mode="json"),
+                "memory": system_monitor.get_snapshot().memory.model_dump(mode="json"),
+                "disk_activity": system_monitor.get_snapshot().disks.activity.model_dump(
+                    mode="json"
+                ),
+                "network": {
+                    **system_monitor.get_snapshot().network.model_dump(mode="json"),
+                    "adapters": [],
+                },
+                "battery": system_monitor.get_snapshot().battery.model_dump(mode="json"),
+                "gpu": system_monitor.get_snapshot().gpu.model_dump(mode="json"),
+                "temperatures": system_monitor.get_snapshot().temperatures.model_dump(
+                    mode="json"
+                ),
+            },
+        ).to_dict(),
+    )
+
     try:
         while True:
             await websocket.receive_text()
@@ -229,6 +278,10 @@ async def register_websocket_broadcasts(
         handlers.append(handler)
 
     for event_type, handler in create_workspace_event_handlers(manager):
+        await event_bus.subscribe(event_type, handler)
+        handlers.append(handler)
+
+    for event_type, handler in create_system_monitor_event_handlers(manager):
         await event_bus.subscribe(event_type, handler)
         handlers.append(handler)
 

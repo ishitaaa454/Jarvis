@@ -1,4 +1,7 @@
+import { Link } from 'react-router-dom';
+
 import { useDashboard } from '../../context/DashboardContext';
+import { formatPercent, formatRate } from '../../utils/formatMetrics';
 import { CircularMetric } from '../metrics/CircularMetric';
 import { ActivityTimeline } from '../timeline/ActivityTimeline';
 import { ActivationSequence } from './ActivationSequence';
@@ -14,6 +17,7 @@ export function CorePanel() {
     voice,
     speech,
     workspace,
+    systemMonitor,
     reducedMotion,
     tabVisible,
     dataStale,
@@ -41,6 +45,7 @@ export function CorePanel() {
 
   const cpuHistory = metricHistory.samples.map((s) => s.cpuPercent);
   const memHistory = metricHistory.samples.map((s) => s.memoryPercent);
+  const snap = systemMonitor.snapshot;
 
   return (
     <div className={styles.root} data-testid="core-panel">
@@ -61,14 +66,35 @@ export function CorePanel() {
         <div className={styles.metrics}>
           <CircularMetric
             label="CPU"
-            value={health?.system.cpu_percent ?? null}
+            value={snap?.cpu.usage_percent ?? health?.system.cpu_percent ?? null}
             history={cpuHistory}
           />
           <CircularMetric
             label="Memory"
-            value={health?.system.memory_percent ?? null}
+            value={snap?.memory.usage_percent ?? health?.system.memory_percent ?? null}
             history={memHistory}
           />
+          <div className={styles.compactSystem}>
+            <h3>System</h3>
+            <Link to="/system?section=network">
+              RX {formatRate(snap?.network.receive_bytes_per_second)}
+            </Link>
+            <Link to="/system?section=network">
+              TX {formatRate(snap?.network.send_bytes_per_second)}
+            </Link>
+            <Link to="/system?section=power">
+              Battery{' '}
+              {snap?.battery.present
+                ? formatPercent(snap.battery.percent)
+                : 'NONE'}
+            </Link>
+            <Link to="/system?section=gpu">
+              GPU{' '}
+              {snap?.gpu.availability === 'AVAILABLE'
+                ? formatPercent(snap.gpu.devices[0]?.usage_percent)
+                : 'N/A'}
+            </Link>
+          </div>
           <div className={styles.services}>
             <h3>Runtime</h3>
             <ul>
@@ -85,8 +111,8 @@ export function CorePanel() {
                 <strong>{workspace.workspaceStatus?.status ?? 'UNKNOWN'}</strong>
               </li>
               <li>
-                <span>Assistant</span>
-                <strong>{assistantState ?? 'UNKNOWN'}</strong>
+                <span>Monitor</span>
+                <strong>{systemMonitor.status?.status ?? 'UNKNOWN'}</strong>
               </li>
             </ul>
           </div>

@@ -270,6 +270,49 @@ export function dispatchDashboardEvent(
     case 'workspace.status_changed':
     case 'tts.utterance_finished':
     case 'tts.sequence_started':
+    case 'system.metrics':
+      return {};
+    case 'system.monitor_status': {
+      const status = String(p.status ?? '');
+      if (status === 'RUNNING' || status === 'DEGRADED' || status === 'STOPPED') {
+        return {
+          timeline: entry(
+            message.type,
+            ts,
+            status,
+            'SYSTEM',
+            status === 'DEGRADED' ? 'WARNING' : 'INFO',
+            `System monitor ${status.toLowerCase()}`,
+          ),
+        };
+      }
+      return {};
+    }
+    case 'system.capabilities_changed':
+      return {
+        timeline: entry(
+          message.type,
+          ts,
+          'caps',
+          'SYSTEM',
+          'INFO',
+          'System monitoring capabilities updated',
+        ),
+      };
+    case 'system.monitor_warning': {
+      const msg = typeof p.message === 'string' ? p.message : 'System monitor warning';
+      return {
+        timeline: entry(message.type, ts, msg, 'SYSTEM', 'WARNING', msg),
+      };
+    }
+    case 'system.monitor_error': {
+      const msg = typeof p.message === 'string' ? p.message : 'System monitor error';
+      return {
+        timeline: entry(message.type, ts, msg, 'ERROR', 'ERROR', msg),
+        announcement: { message: msg, politeness: 'assertive' },
+      };
+    }
+    case 'system.processes_updated':
       return {};
     default:
       if (import.meta.env.DEV) {

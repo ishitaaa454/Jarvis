@@ -1,13 +1,13 @@
 # Architecture
 
-Jarvis Workspace is a local monorepo with a clear split between a Python backend (control plane) and a React frontend (presentation plane). Phases 1–4 established communication, wake phrase, TTS, and Windows workspace launching. Phase 5 adds the cinematic dashboard presentation layer on top of the same backend events.
+Jarvis Workspace is a local monorepo with a clear split between a Python backend (control plane) and a React frontend (presentation plane). Phases 1–5 established communication, wake phrase, TTS, workspace launching, and the cinematic dashboard. Phase 6 adds advanced local system monitoring through `SystemMonitorService` and the System Intelligence panel.
 
 ## Backend responsibilities
 
-- Expose HTTP APIs for health, assistant state, voice control, TTS, and workspace
+- Expose HTTP APIs for health, assistant state, voice control, TTS, workspace, and system monitoring
 - Own the assistant lifecycle via `StateManager`
-- Broadcast state, voice, TTS, and workspace events over WebSocket
-- Collect basic host metrics (CPU / memory) with `psutil`
+- Broadcast state, voice, TTS, workspace, and system-monitor events over WebSocket
+- Collect host metrics with `psutil` via `SystemMonitorService` (and basic CPU/memory on `/api/health`)
 - Own the Windows microphone stream (`VoiceService`)
 - Own speech synthesis/playback (`TtsService` + Piper)
 - Own Windows application control (`WorkspaceService` + registry / process / window helpers)
@@ -20,11 +20,12 @@ The backend is intentionally free of UI concerns. It does not render dashboards 
 
 - Render the dashboard shell (Home, System, Applications, Settings)
 - Maintain a single WebSocket connection through `useJarvisSocket`
-- Poll `/api/health` for live CPU and memory values
+- Poll `/api/health` for compact Core CPU/memory sparklines
+- Load Phase 6 monitoring via `useSystemMonitor` + `/api/system-monitor/*`
 - Load and update voice, TTS, and workspace status via REST + WebSocket
 - Display connection status, assistant state, wake activation, and workspace progress
 - Provide manual Start / Cancel / Open / Focus controls for approved applications only
-- Keep unfinished features visibly marked as later-phase placeholders
+- Show unsupported monitoring features with explicit availability states — never invented numbers
 
 The frontend never invents system metrics or application control status. The browser does **not** capture microphone audio. Application launches always go through approved backend definitions — never arbitrary shell commands.
 
@@ -242,3 +243,52 @@ Browser Fullscreen API only after a user gesture. Escape is observed via `fullsc
 ### Future desktop packaging
 
 Later phases may add system-tray / kiosk packaging; Phase 5 remains a browser dashboard.
+
+## Phase 6 system monitoring architecture
+
+### SystemMonitorService lifecycle
+
+`SystemMonitorService` starts during FastAPI lifespan when `SYSTEM_MONITOR_ENABLED` and `SYSTEM_MONITOR_START_AUTOMATICALLY` are true, and stops cleanly on shutdown. States: `DISABLED`, `STARTING`, `RUNNING`, `DEGRADED`, `STOPPING`, `STOPPED`, `ERROR`. `DEGRADED` means monitoring continues while one or more optional providers are unavailable. This is separate from assistant `StateManager` state.
+
+### Sampling scheduler
+
+One controlled async loop owns sampling. It never starts a new cycle while the previous cycle is still running. Intervals (configurable):
+
+- Fast (~1s): CPU, memory, disk I/O rates, network throughput, battery
+- Processes (~5s): safe process table
+- Static (~60s): OS info, drive list, adapters, capability refresh
+- Optional hardware (~2s): GPU / temperatures when supported
+
+Blocking `psutil` work runs in a small `ThreadPoolExecutor` with provider timeouts.
+
+### Provider architecture
+
+Providers are isolated modules under `app/services/system_monitor/`. Failures are recorded as safe provider errors; other providers continue. Capability detection distinguishes working, absent hardware, missing optional packages, permission limits, and unsupported platforms.
+
+### Metric history and rates
+
+`MetricHistoryStore` keeps bounded deques (~300 samples / ~5 minutes) for chart series. History is in-memory only and resets on backend restart (LIVE SESSION HISTORY). `MetricRateCalculator` derives throughput from cumulative counters using monotonic time, handling first sample, resets, wraparound, and negative deltas by returning unavailable rather than invented zeroes.
+
+### GPU and temperature providers
+
+GPU monitoring uses an optional NVIDIA NVML binding. Missing package, driver, or GPU does not fail the backend. Temperature monitoring tries `psutil.sensors_temperatures()` then an optional configured LibreHardwareMonitor path — never auto-downloaded or auto-started.
+
+### Process privacy boundary
+
+Process records expose only PID, name, CPU %, memory %, RSS, status, and optional start time. Command lines, paths, usernames, open files, and network connections are never collected or published.
+
+### WebSocket cadence
+
+Events reuse the existing `/ws` connection:
+
+- `system.monitor_status`
+- `system.metrics` (fast metrics; no full history)
+- `system.processes_updated` (slower)
+- `system.capabilities_changed` (only on material change)
+- `system.monitor_warning` / `system.monitor_error`
+
+Static drive/adapter detail is served primarily via REST (`/api/system-monitor/*`), not every second on the socket.
+
+### Frontend reconciliation
+
+`useSystemMonitor` owns snapshot, capabilities, process list, and bounded series. WebSocket updates prefer newer timestamps; reconnect re-fetches REST status/snapshot/capabilities. Charts are lightweight SVG and never invent missing samples.

@@ -1,0 +1,7 @@
+# Optional Phase 6 dependencies (not required for normal install)
+
+# NVIDIA GPU metrics via NVML (only if you have an NVIDIA GPU + drivers):
+#   pip install nvidia-ml-py
+#
+# LibreHardwareMonitor is NOT a pip package. Install the Windows tool separately
+# and set LIBRE_HARDWARE_MONITOR_ENABLED / LIBRE_HARDWARE_MONITOR_PATH in .env.
